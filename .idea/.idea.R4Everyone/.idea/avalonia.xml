@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="R4Everyone/App.axaml" value="R4Everyone.Browser/R4Everyone.Browser.csproj" />
+        <entry key="R4Everyone/Views/MainView.axaml" value="R4Everyone.Browser/R4Everyone.Browser.csproj" />
+        <entry key="R4Everyone/Views/MainWindow.axaml" value="R4Everyone.Browser/R4Everyone.Browser.csproj" />
+      </map>
+    </option>
+  </component>
+</project>

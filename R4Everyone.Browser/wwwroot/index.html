@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>R4Everyone.Browser</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./app.css"/>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const splash = document.querySelector(".avalonia-splash");
+            const splashText = document.querySelector(".status-text");
+            const loadingRing = document.querySelector(".lds-ring");
+
+            const observer = new MutationObserver((mutationsList) => {
+                for (const mutation of mutationsList) {
+                    if (mutation.type === "attributes" && mutation.attributeName === "class" && splash.classList.contains("splash-close")) {
+                        splashText.classList.remove("fade-in-child");
+                        splashText.classList.add("fade-out-child");
+                        loadingRing.classList.remove("fade-in-child");
+                        loadingRing.classList.add("fade-out-child");
+
+                        setTimeout(() => {
+                            loadingRing.style.display = "none";
+                            splashText.textContent = "Done!";
+                            splashText.classList.remove("fade-out-child");
+                            splashText.classList.add("fade-in-child");
+                        }, 350);
+                        
+                        setTimeout(() => {
+                            splash.classList.add("fade-out");
+                        }, 1500);
+
+                        observer.disconnect();
+                    }
+                }
+            })
+
+            observer.observe(splash, {attributes: true});
+        });
+    </script>
+</head>
+
+<body style="margin: 0; overflow: hidden">
+<div id="out">
+    <div class="avalonia-splash">
+        <div class="lds-ring" style="margin-right: 1rem">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <h2 class="status-text fade-in">R4Everyone is loading...</h2>
+    </div>
+</div>
+<script type='module' src="./main.js"></script>
+</body>
+
+</html>

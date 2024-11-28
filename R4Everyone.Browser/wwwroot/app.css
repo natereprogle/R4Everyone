@@ -1,0 +1,134 @@
+﻿/* CSS for the loading ring */
+.lds-ring,
+.lds-ring div {
+    box-sizing: border-box;
+}
+
+.lds-ring {
+    display: inline-block;
+    position: relative;
+    width: 80px;
+    height: 80px;
+    pointer-events: none;
+}
+
+.lds-ring div {
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    margin: 8px;
+    border: 8px solid currentColor;
+    border-radius: 50%;
+    animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    border-color: currentColor transparent transparent transparent;
+}
+
+.lds-ring div:nth-child(1) {
+    animation-delay: -0.45s;
+}
+
+.lds-ring div:nth-child(2) {
+    animation-delay: -0.3s;
+}
+
+.lds-ring div:nth-child(3) {
+    animation-delay: -0.15s;
+}
+
+@keyframes lds-ring {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* HTML styles for the splash screen */
+.avalonia-splash {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background: white;
+    font-family: 'Outfit', sans-serif;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    pointer-events: none;
+}
+
+/* Light theme styles */
+@media (prefers-color-scheme: light) {
+    .avalonia-splash {
+        background: white;
+    }
+
+    .avalonia-splash h2 {
+        color: #1b2a4e;
+    }
+
+    .avalonia-splash a {
+        color: #0D6EFD;
+    }
+
+    .lds-ring {
+        /* change color here */
+        color: #1c4c5b
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .avalonia-splash {
+        background: #1b2a4e;
+    }
+
+    .avalonia-splash h2 {
+        color: white;
+    }
+
+    .avalonia-splash a {
+        color: white;
+    }
+
+    .lds-ring {
+        /* change color here */
+        color: #8fb5c3
+    }
+}
+
+.avalonia-splash h2 {
+    font-weight: 400;
+    font-size: 1.5rem;
+}
+
+.avalonia-splash a {
+    text-decoration: none;
+    font-size: 2.5rem;
+    display: block;
+}
+
+.avalonia-splash.fade-out {
+    opacity: 0;
+    transition: opacity 200ms, display 200ms;
+    animation: hide 200ms forwards;
+}
+
+@keyframes hide {
+    to {
+        display: none;
+    }
+}
+
+.fade-out-child {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-in-child {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
