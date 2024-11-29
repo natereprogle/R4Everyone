@@ -45,57 +45,55 @@ public class R4GameDeserializer(R4Game game)
 
     private static async Task ParseItemsAsync(BinaryReader reader, dynamic currentContainer)
     {
-        var numItems = reader.ReadUInt16(); // Number of items in the current game or folder
+        // The UInt16 at the beginning of a folder is the number of items in the folder. 
+        // At the beginning of a cheat, it's the number of 4 byte chunks in the item
+        // We don't care about this, but we do need to consume it
+        var numItems = reader.ReadUInt16();
 
-        for (var i = 0; i < numItems; i++)
+        var itemType = reader.ReadUInt16();
+        var title = ReadItemMeta(reader);
+        uint numChunks = 0;
+        if (itemType is not (0x1000 or 0x1100))
         {
-            var itemType = reader.ReadUInt16();
-            var title = ReadItemMeta(reader);
-            uint numChunks = 0;
-            var enabled = false;
-            if (itemType is not (0x1000 or 0x1100))
+            var chunks = reader.ReadBytes(4);
+            numChunks = (uint)(chunks[0] | (chunks[1] << 8) | (chunks[2] << 16) | (chunks[3] << 24));
+        }
+
+        switch (itemType)
+        {
+            // Folder
+            case 0x1000:
+            case 0x1100:
             {
-                var chunks = reader.ReadBytes(3);
-                numChunks = (uint)(chunks[0] | (chunks[1] << 8) | (chunks[2] << 16));
-                enabled = reader.ReadBytes(2)[1] == 1;
+                var folder = new R4Folder
+                {
+                    Title = title.Item1,
+                    Description = title.Item2 ?? "",
+                    OneHot = itemType == 0x1100
+                };
+
+                // Recursively parse items within the folder
+                await ParseItemsAsync(reader, folder);
+
+                // Add folder to the current container (R4Game or R4Folder)
+                currentContainer.Folders.Add(folder);
+                break;
             }
-
-            switch (itemType)
+            // Cheat
+            case 0x0100:
+            case 0x0000:
             {
-                // Folder
-                case 0x1000:
-                case 0x1100:
+                var cheat = new R4Cheat
                 {
-                    var folder = new R4Folder
-                    {
-                        Title = title.Item1,
-                        Description = title.Item2 ?? "",
-                        OneHot = itemType == 0x1100
-                    };
+                    Title = title.Item1,
+                    Description = title.Item2 ?? "",
+                    Enabled = itemType == 0x0100,
+                    Code = ReadCheatCodes(reader, numChunks)
+                };
 
-                    // Recursively parse items within the folder
-                    await ParseItemsAsync(reader, folder);
-
-                    // Add folder to the current container (R4Game or R4Folder)
-                    currentContainer.Folders.Add(folder);
-                    break;
-                }
-                // Cheat
-                case 0x0100:
-                case 0x0000:
-                {
-                    var cheat = new R4Cheat
-                    {
-                        Title = title.Item1,
-                        Description = title.Item2 ?? "",
-                        Enabled = enabled,
-                        Code = ReadCheatCodes(reader, numChunks)
-                    };
-
-                    // Add cheat to the current container
-                    currentContainer.Cheats.Add(cheat);
-                    break;
-                }
+                // Add cheat to the current container
+                currentContainer.Cheats.Add(cheat);
+                break;
             }
         }
     }
@@ -113,7 +111,7 @@ public class R4GameDeserializer(R4Game game)
         // Early return if it's a game, since games don't have descriptions
         if (game)
         {
-            reader.BaseStream.Seek((4 - titleBytes.Count % 4) % 4 - 1, SeekOrigin.Current);
+            reader.BaseStream.Seek((4 - reader.BaseStream.Position % 4) % 4, SeekOrigin.Current);
             Console.WriteLine("Parsing game: " + Encoding.ASCII.GetString(titleBytes.ToArray()));
             return (Encoding.ASCII.GetString(titleBytes.ToArray()), null);
         }
@@ -125,12 +123,7 @@ public class R4GameDeserializer(R4Game game)
             descriptionBytes.Add(by);
         }
 
-        reader.BaseStream.Seek((4 - (titleBytes.Count + 1 + descriptionBytes.Count) % 4) % 4 - 1, SeekOrigin.Current);
-
-        if ((titleBytes.Count + 1 + descriptionBytes.Count) % 4 == 0)
-        {
-            reader.BaseStream.Seek(4, SeekOrigin.Current);
-        }
+        reader.BaseStream.Seek((4 - reader.BaseStream.Position % 4) % 4, SeekOrigin.Current);
 
         Console.WriteLine("Parsing item: " + Encoding.ASCII.GetString(titleBytes.ToArray()));
         return (Encoding.ASCII.GetString(titleBytes.ToArray()), Encoding.ASCII.GetString(descriptionBytes.ToArray()));
