@@ -20,5 +20,7 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm"/>
+        
+        <ProjectReference Include="..\R4Everyone.Binary4Everyone\R4Everyone.Binary4Everyone.csproj"/>
     </ItemGroup>
 </Project>
