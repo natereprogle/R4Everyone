@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="R4Everyone.Views.GamesView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:R4Everyone.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:binary4Everyone="using:R4Everyone.Binary4Everyone"
+    mc:Ignorable="d"
+    DataContext="{x:Bind ViewModel, Mode=OneWay}">
+
+    <Page.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"></converters:InverseBooleanConverter>
+    </Page.Resources>
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header with Buttons -->
+        <Border Grid.Row="0"
+            Height="32"
+            HorizontalAlignment="Right">
+            <StackPanel Orientation="Horizontal">
+
+                <!-- New button -->
+                <Button Command="{x:Bind ViewModel.NewFileCommand}" Margin="0,0,10,0">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE710;" FontSize="14" Margin="0,0,5,0"/>
+                            <!-- Equivalent of 'New' icon -->
+                            <TextBlock Text="New R4 File"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+
+                <!-- Open button -->
+                <Button Command="{x:Bind ViewModel.OpenFileCommand}" Margin="0,0,10,0">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE838;" FontSize="14" Margin="0,0,5,0"/>
+                            <!-- Folder icon -->
+                            <TextBlock Text="Open R4 File"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+
+                <!-- Save button -->
+                <Button Command="{x:Bind ViewModel.SaveFileCommand}" 
+                        IsEnabled="{x:Bind ViewModel.IsEditing, Mode=OneWay}">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE105;" FontSize="14" Margin="0,0,5,0"/>
+                            <!-- Save icon -->
+                            <TextBlock Text="Save R4 File"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+
+            </StackPanel>
+        </Border>
+
+        <!-- No File Loaded Message -->
+        <TextBlock Grid.Row="1"
+           HorizontalAlignment="Center"
+           VerticalAlignment="Center"
+           Visibility="{x:Bind ViewModel.IsEditing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}">
+    No cheat file loaded. Open a file to get started, or create a new one!
+        </TextBlock>
+
+        <!-- Loading Indicator -->
+        <StackPanel Grid.Row="1"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Orientation="Horizontal"
+            Visibility="{x:Bind  ViewModel.IsLoading, Mode=OneWay}">
+            <TextBlock Margin="0,0,10,0" VerticalAlignment="Center">Loading R4Database, please wait...</TextBlock>
+            <ProgressRing IsActive="True" Width="20" Height="20" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Saving Indicator -->
+        <StackPanel Grid.Row="1"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Orientation="Horizontal"
+            Visibility="{x:Bind ViewModel.IsSaving, Mode=OneWay}">
+            <TextBlock Margin="0,0,10,0" VerticalAlignment="Center">Saving R4Database, please wait...</TextBlock>
+            <ProgressRing IsActive="True" Width="20" Height="20" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Main Content Grid (When Editing) -->
+        <Grid Grid.Row="1" Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay}">
+            <ListView ItemsSource="{x:Bind ViewModel.DisplayGames}" SelectionMode="Single" Margin="10">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="binary4Everyone:R4Game">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10">
+                            <Image Source="/Assets/BlankCoverImage.png"
+                           Width="200"
+                           Height="200"
+                           VerticalAlignment="Top"/>
+                            <TextBlock Text="{x:Bind GameTitle}" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2"/>
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+            </ListView>
+        </Grid>
+    </Grid>
+
+</Page>

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "R4Everyone (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "R4Everyone (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
