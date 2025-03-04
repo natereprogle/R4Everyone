@@ -88,21 +88,21 @@
 
         <!-- Main Content Grid (When Editing) -->
         <Grid Grid.Row="1" Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay}">
-            <ListView ItemsSource="{x:Bind ViewModel.DisplayGames}" SelectionMode="Single" Margin="10">
+            <ListView ItemsSource="{x:Bind ViewModel.DisplayGames, Mode=OneWay}" SelectionMode="Single" Margin="10">
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="binary4Everyone:R4Game">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10">
-                            <Image Source="/Assets/BlankCoverImage.png"
-                           Width="200"
-                           Height="200"
-                           VerticalAlignment="Top"/>
-                            <TextBlock Text="{x:Bind GameTitle}" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10" Padding="0 10 0 25">
+                            <Image Source="/Assets/AppAssets/BlankCoverImage.png"
+                                   Width="200"
+                                   Height="200"
+                                   VerticalAlignment="Top"/>
+                            <TextBlock Text="{x:Bind GameTitle}" HorizontalAlignment="Center" TextWrapping="Wrap" Padding="0 0 0 20"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListView.ItemTemplate>
                 <ListView.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2"/>
+                        <ItemsWrapGrid Orientation="Horizontal" />
                     </ItemsPanelTemplate>
                 </ListView.ItemsPanel>
             </ListView>

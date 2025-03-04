@@ -13,10 +13,9 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Content Remove="Assets\BlankCoverImage.png" />
-	</ItemGroup>
-	<ItemGroup>
-	  <None Remove="Views\MainView.xaml" />
+		<Content Include="Assets\AppAssets\**\*.*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -43,21 +42,27 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\R4Everyone.Binary4Everyone\R4Everyone.Binary4Everyone.csproj" />
+		<ProjectReference Include="..\R4Everyone.Binary4Everyone\R4Everyone.Binary4Everyone.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Page Update="Views\GamesView.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </Page>
+		<Content Update="Assets\AppAssets\BlankCoverImage.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 	<ItemGroup>
-	  <Page Update="Views\MainView.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </Page>
+		<Page Update="Views\GamesView.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+	</ItemGroup>
+	<ItemGroup>
+		<Page Update="Views\MainView.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
 	</ItemGroup>
 
 	<!--

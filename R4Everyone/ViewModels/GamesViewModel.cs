@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -12,33 +9,49 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml.Controls;
 using R4Everyone.Binary4Everyone;
 using R4Everyone.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace R4Everyone.ViewModels;
 
 public partial class GamesViewModel : ObservableObject
 {
     public ObservableCollection<R4Game> DisplayGames { get; set; } = [];
-    private readonly IDialogService _dialogService;
+    private readonly DialogService _dialogService;
+    private readonly DatabaseService _databaseService;
 
-    public R4Database R4Database = new();
+    private bool _isEditing;
+    public bool IsEditing
+    {
+        get => _isEditing;
+        set => SetProperty(ref _isEditing, value);
+    }
 
-    [ObservableProperty] private bool _isEditing;
+    private bool _isLoading;
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set => SetProperty(ref _isLoading, value);
+    }
 
-    [ObservableProperty] private bool _isLoading;
-
-    [ObservableProperty] private bool _isSaving;
+    private bool _isSaving;
+    public bool IsSaving
+    {
+        get => _isSaving;
+        set => SetProperty(ref _isSaving, value);
+    }
 
     public IAsyncRelayCommand NewFileCommand { get; }
     public IAsyncRelayCommand OpenFileCommand { get; }
     public IAsyncRelayCommand SaveFileCommand { get; }
 
-    public GamesViewModel(IDialogService dialogService)
+    public GamesViewModel(DialogService dialogService)
     {
         NewFileCommand = new AsyncRelayCommand(NewFileAction);
         OpenFileCommand = new AsyncRelayCommand(OpenFileAction);
         SaveFileCommand = new AsyncRelayCommand(SaveFileAction);
 
         _dialogService = dialogService;
+        _databaseService = App.Services.GetRequiredService<DatabaseService>();
     }
 
     private async Task NewFileAction()
@@ -47,7 +60,7 @@ public partial class GamesViewModel : ObservableObject
 
         if (IsEditing)
         {
-            dialogResult = await _dialogService.ShowConfirmationAsync("Discard changes?", "Creating a new file will result in unsaved changes being lost. Do you want to save your changes?");
+            dialogResult = await _dialogService.ShowConfirmationAsync("Save changes?", "Creating a new file will result in unsaved changes being lost. Do you want to save your changes?");
         }
 
         if (dialogResult == ContentDialogResult.Primary && IsEditing)
@@ -63,7 +76,7 @@ public partial class GamesViewModel : ObservableObject
             case ContentDialogResult.Secondary:
                 IsEditing = true;
 
-                R4Database = new R4Database();
+                _databaseService.R4Database = new R4Database();
 
                 DisplayGames.Clear();
 
@@ -80,14 +93,71 @@ public partial class GamesViewModel : ObservableObject
 
     private async Task OpenFileAction()
     {
-        // Implementation for creating a new file
+        var dialogResult = ContentDialogResult.Primary;
+
+        if (IsEditing)
+        {
+            dialogResult = await _dialogService.ShowConfirmationAsync("Save changes?", "Opening a new file will result in unsaved changes being lost. Do you want to save your changes?");
+        }
+
+        if (dialogResult == ContentDialogResult.Primary && IsEditing)
+            await SaveFileAction();
+
+        switch (dialogResult)
+        {
+            case ContentDialogResult.Primary:
+            case ContentDialogResult.Secondary:
+
+                var openPicker = new FileOpenPicker();
+
+                var window = App.MainWindow;
+
+                var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+
+                WinRT.Interop.InitializeWithWindow.Initialize(openPicker, hWnd);
+
+                openPicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+                openPicker.FileTypeFilter.Add(".dat");
+
+                var file = await openPicker.PickSingleFileAsync();
+                if (file != null)
+                {
+                    DisplayGames.Clear();
+                    IsEditing = true;
+
+                    _databaseService.R4Database = new R4Database(file.Path);
+                    IsLoading = true;
+
+                    try
+                    {
+                        await Task.Run(async () => await _databaseService.R4Database.ParseDatabaseAsync());
+                        _databaseService.R4Database.Games.ForEach(DisplayGames.Add);
+                    }
+                    finally
+                    {
+                        IsLoading = false;
+                    }
+                }
+                else
+                {
+                    await _dialogService.ShowMessageAsync("Operation cancelled",
+                        "No file was selected");
+                }
+
+                break;
+            case ContentDialogResult.None:
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
     }
 
     private async Task SaveFileAction()
     {
         if (!IsEditing) throw new InvalidOperationException("Cannot save a file outside of an editing state");
 
-        if (string.IsNullOrWhiteSpace(R4Database.R4FilePath))
+        if (string.IsNullOrWhiteSpace(_databaseService.R4Database.R4FilePath))
         {
             var savePicker = new FileSavePicker();
 
@@ -105,11 +175,13 @@ public partial class GamesViewModel : ObservableObject
             if (file != null)
             {
                 CachedFileManager.DeferUpdates(file);
-                R4Database.R4FilePath = file.Path;
-                var serializer = new R4Serializer(R4Database);
+                _databaseService.R4Database.R4FilePath = file.Path;
+                var serializer = new R4Serializer(_databaseService.R4Database);
                 await serializer.SerializeAsync();
                 var status = await CachedFileManager.CompleteUpdatesAsync(file);
 
+                // Why is this even necessary, since this is literally what default is for?
+                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                 switch (status)
                 {
                     case FileUpdateStatus.Complete:

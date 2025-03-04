@@ -8,14 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace R4Everyone.Services;
 
-public interface IDialogService
-{
-    Task<ContentDialogResult> ShowConfirmationAsync(string title, string content);
-    Task ShowMessageAsync(string title, string content);
-    void Initialize(XamlRoot xamlRoot);
-}
-
-public class DialogService : IDialogService
+public class DialogService
 {
     private XamlRoot _xamlRoot;
 
