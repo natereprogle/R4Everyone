@@ -5,21 +5,23 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using R4Everyone.Binary4Everyone;
+using R4Everyone.Views;
 
 namespace R4Everyone.Services;
 
 public class DialogService
 {
-    private XamlRoot _xamlRoot;
+    public XamlRoot? XamlRoot { get; private set; }
 
     public void Initialize(XamlRoot xamlRoot)
     {
-        _xamlRoot = xamlRoot;
+        XamlRoot = xamlRoot;
     }
 
     public async Task<ContentDialogResult> ShowConfirmationAsync(string title, string content)
     {
-        if (_xamlRoot is null)
+        if (XamlRoot is null)
             throw new InvalidOperationException("DialogService must be initialized before use");
 
         var dialog = new ContentDialog
@@ -31,7 +33,7 @@ public class DialogService
             SecondaryButtonText = "No",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = _xamlRoot
+            XamlRoot = XamlRoot
         };
 
         return await dialog.ShowAsync();
@@ -39,7 +41,7 @@ public class DialogService
 
     public async Task ShowMessageAsync(string title, string content)
     {
-        if (_xamlRoot is null)
+        if (XamlRoot is null)
             throw new InvalidOperationException("DialogService must be initialized before use");
 
         var dialog = new ContentDialog
@@ -49,7 +51,7 @@ public class DialogService
             Content = content,
             PrimaryButtonText = "Yes",
             DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = _xamlRoot
+            XamlRoot = XamlRoot
         };
 
         await dialog.ShowAsync();

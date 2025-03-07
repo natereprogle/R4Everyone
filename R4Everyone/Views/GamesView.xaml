@@ -88,7 +88,7 @@
 
         <!-- Main Content Grid (When Editing) -->
         <Grid Grid.Row="1" Visibility="{x:Bind ViewModel.IsEditing, Mode=OneWay}">
-            <ListView ItemsSource="{x:Bind ViewModel.DisplayGames, Mode=OneWay}" SelectionMode="Single" Margin="10">
+            <ListView ItemsSource="{x:Bind ViewModel.DisplayGames, Mode=OneWay}" SelectionMode="Extended" Margin="10" ItemClick="{x:Bind ViewModel.OnGameClick, Mode=OneWay}" IsItemClickEnabled="True">
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="binary4Everyone:R4Game">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10" Padding="0 10 0 25">

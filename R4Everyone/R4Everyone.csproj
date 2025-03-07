@@ -17,6 +17,10 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
+	<ItemGroup>
+	  <None Remove="Views\DatabaseView.xaml" />
+	  <None Remove="Views\GameDialogView.xaml" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Content Include="Assets\SplashScreen.scale-200.png" />
@@ -55,6 +59,16 @@
 		</Content>
 	</ItemGroup>
 	<ItemGroup>
+	  <Page Update="Views\GameDialogView.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </Page>
+	</ItemGroup>
+	<ItemGroup>
+	  <Page Update="Views\DatabaseView.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </Page>
+	</ItemGroup>
+	<ItemGroup>
 		<Page Update="Views\GamesView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</Page>
@@ -80,5 +94,6 @@
 		<PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
 		<PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
 		<PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
 </Project>

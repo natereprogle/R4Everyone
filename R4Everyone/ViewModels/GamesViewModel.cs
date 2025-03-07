@@ -10,6 +10,8 @@ using Microsoft.UI.Xaml.Controls;
 using R4Everyone.Binary4Everyone;
 using R4Everyone.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
+using R4Everyone.Views;
 
 namespace R4Everyone.ViewModels;
 
@@ -157,6 +159,8 @@ public partial class GamesViewModel : ObservableObject
     {
         if (!IsEditing) throw new InvalidOperationException("Cannot save a file outside of an editing state");
 
+        StorageFile? file;
+
         if (string.IsNullOrWhiteSpace(_databaseService.R4Database.R4FilePath))
         {
             var savePicker = new FileSavePicker();
@@ -171,35 +175,71 @@ public partial class GamesViewModel : ObservableObject
             savePicker.FileTypeChoices.Add("R4 Database", [".dat"]);
             savePicker.SuggestedFileName = "usrcheat";
 
-            var file = await savePicker.PickSaveFileAsync();
-            if (file != null)
-            {
-                CachedFileManager.DeferUpdates(file);
-                _databaseService.R4Database.R4FilePath = file.Path;
-                var serializer = new R4Serializer(_databaseService.R4Database);
-                await serializer.SerializeAsync();
-                var status = await CachedFileManager.CompleteUpdatesAsync(file);
-
-                // Why is this even necessary, since this is literally what default is for?
-                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-                switch (status)
-                {
-                    case FileUpdateStatus.Complete:
-                        await _dialogService.ShowMessageAsync("File saved", "The file was saved successfully");
-                        break;
-                    case FileUpdateStatus.CompleteAndRenamed:
-                        await _dialogService.ShowMessageAsync("File saved",
-                            "The file was saved successfully, but a copy was made");
-                        break;
-                    default:
-                        await _dialogService.ShowMessageAsync("File not saved", "The file was not saved successfully");
-                        break;
-                }
-            }
-            else
+            file = await savePicker.PickSaveFileAsync();
+            if (file is null)
             {
                 await _dialogService.ShowMessageAsync("File not saved", "Save was cancelled");
+                return;
             }
+        }
+        else
+        {
+            file = await StorageFile.GetFileFromPathAsync(_databaseService.R4Database.R4FilePath);
+        }
+
+        CachedFileManager.DeferUpdates(file);
+        _databaseService.R4Database.R4FilePath = file.Path;
+        var serializer = new R4Serializer(_databaseService.R4Database);
+        await serializer.SerializeAsync();
+        var status = await CachedFileManager.CompleteUpdatesAsync(file);
+
+        // Why is this even necessary, since this is literally what default is for?
+        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+        switch (status)
+        {
+            case FileUpdateStatus.Complete:
+                await _dialogService.ShowMessageAsync("File saved", "The file was saved successfully");
+                break;
+            case FileUpdateStatus.CompleteAndRenamed:
+                await _dialogService.ShowMessageAsync("File saved",
+                    "The file was saved successfully, but a copy was made");
+                break;
+            default:
+                await _dialogService.ShowMessageAsync("File not saved", "The file was not saved successfully");
+                break;
+        }
+    }
+
+    public async Task OnGameClick(object sender, ItemClickEventArgs e)
+    {
+        if (sender is not null)
+        {
+            if (e.ClickedItem is not R4Game game)
+                return;
+
+            if (_dialogService.XamlRoot is null)
+                throw new InvalidOperationException("DialogService must be initialized before use");
+
+            var appWindow = App.MainWindow ?? throw new ApplicationException("Can't open a dialog if the main window is null");
+
+            var dialog = new ContentDialog
+            {
+                Title = $"{game.GameTitle}",
+                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                XamlRoot = _dialogService.XamlRoot,
+                Width = App.MainWindow.Bounds.Width,
+                Height = App.MainWindow.Bounds.Height,
+                DataContext = game,
+                PrimaryButtonText = "Done"
+            };
+
+            dialog.Content = new GameDialogView(game);
+
+            await dialog.ShowAsync();
+        }
+        else
+        {
+            throw new ArgumentNullException(nameof(sender));
         }
     }
 }
