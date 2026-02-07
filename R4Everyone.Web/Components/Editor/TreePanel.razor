@@ -1,0 +1,11 @@
+<div class="card panel-card tree-panel shadow-sm">
+    <div class="card-header">Games</div>
+    <div class="card-body panel-body">
+        <TreeView />
+    </div>
+</div>
+
+@code {
+    [Parameter] public R4Database? Database { get; set; }
+    [Parameter] public object? Selected { get; set; }
+}

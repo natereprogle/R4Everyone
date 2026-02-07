@@ -1,0 +1,50 @@
+<div class="row g-3">
+    <div class="col-12">
+        <label class="form-label">Title</label>
+        <input class="form-control" value="@Cheat.Title" @oninput="OnCheatTitleInput" />
+    </div>
+    <div class="col-12">
+        <label class="form-label">Description</label>
+        <textarea class="form-control" rows="4" @oninput="OnCheatDescriptionInput">@Cheat.Description</textarea>
+    </div>
+    <div class="col-12">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" checked="@Cheat.Enabled" @onchange="OnCheatEnabledChanged" />
+            <label class="form-check-label">Enabled</label>
+        </div>
+    </div>
+</div>
+
+<hr />
+
+<div class="codes-editor">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="section-title">Codes</div>
+        <button class="btn btn-sm btn-outline-primary" @onclick="OnAddCheatRow">Add Row</button>
+    </div>
+    @for (var rowIndex = 0; rowIndex < CodeRows.Count / 2; rowIndex++)
+    {
+        var leftIndex = rowIndex * 2;
+        var rightIndex = leftIndex + 1;
+        <div class="code-row">
+            <input class="form-control code-input" value="@CodeRows[leftIndex]" @oninput="(e) => OnCheatBlockInput?.Invoke(leftIndex, e)" />
+            <input class="form-control code-input" value="@CodeRows[rightIndex]" @oninput="(e) => OnCheatBlockInput?.Invoke(rightIndex, e)" />
+
+            @{
+                var index = rowIndex;
+            }
+            <button class="btn btn-sm btn-outline-danger" @onclick="() => OnRemoveCheatRow?.Invoke(index)">Remove</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public R4Cheat Cheat { get; set; } = null!;
+    [Parameter] public List<string> CodeRows { get; set; } = [];
+    [Parameter] public EventCallback<ChangeEventArgs> OnCheatTitleInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
+    [Parameter] public Action<int, ChangeEventArgs>? OnCheatBlockInput { get; set; }
+    [Parameter] public EventCallback OnAddCheatRow { get; set; }
+    [Parameter] public Action<int>? OnRemoveCheatRow { get; set; }
+}

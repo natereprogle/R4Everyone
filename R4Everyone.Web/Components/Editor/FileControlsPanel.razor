@@ -1,0 +1,18 @@
+<div class="card panel-card controls-panel shadow-sm">
+    <div class="card-header">File Controls</div>
+    <div class="card-body panel-body">
+        <button class="btn btn-outline-primary w-100" @onclick="OnNew">New File</button>
+        <label class="btn btn-outline-secondary w-100">
+            Open File
+            <InputFile class="d-none" OnChange="OnOpen" accept=".dat" />
+        </label>
+        <button class="btn btn-primary w-100" @onclick="OnSave" disabled="@(!CanSave)">Save File</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool CanSave { get; set; }
+    [Parameter] public EventCallback OnNew { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnOpen { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+}

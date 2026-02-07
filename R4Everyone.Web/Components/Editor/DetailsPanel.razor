@@ -1,0 +1,69 @@
+<div class="card panel-card details-panel shadow-sm">
+    <div class="card-header">@Header</div>
+    <div class="card-body panel-body">
+        @switch (SelectionKind)
+        {
+            case SelectionKind.Game when Game != null:
+                <GameDetailsEditor
+                    Game="Game"
+                    MasterCodes="MasterCodes"
+                    OnGameIdInput="OnGameIdInput"
+                    OnGameTitleInput="OnGameTitleInput"
+                    OnGameChecksumInput="OnGameChecksumInput"
+                    OnGameEnabledChanged="OnGameEnabledChanged"
+                    OnMasterCodeInput="OnMasterCodeInput"
+                    OnRomFileSelected="OnRomFileSelected" />
+                break;
+            case SelectionKind.Folder when Folder != null:
+                <FolderDetailsEditor
+                    Folder="Folder"
+                    OnFolderTitleInput="OnFolderTitleInput"
+                    OnFolderDescriptionInput="OnFolderDescriptionInput"
+                    OnFolderOneHotChanged="OnFolderOneHotChanged" />
+                break;
+            case SelectionKind.Cheat when Cheat != null:
+                <CheatDetailsEditor
+                    Cheat="Cheat"
+                    CodeRows="CheatCodeRows"
+                    OnCheatTitleInput="OnCheatTitleInput"
+                    OnCheatDescriptionInput="OnCheatDescriptionInput"
+                    OnCheatEnabledChanged="OnCheatEnabledChanged"
+                    OnCheatBlockInput="OnCheatBlockInput"
+                    OnAddCheatRow="OnAddCheatRow"
+                    OnRemoveCheatRow="OnRemoveCheatRow" />
+                break;
+            case SelectionKind.None:
+            default:
+                <div class="empty-state">Select an item to edit its details.</div>
+                break;
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Header { get; set; } = "Select an item";
+    [Parameter] public SelectionKind SelectionKind { get; set; }
+    [Parameter] public R4Game? Game { get; set; }
+    [Parameter] public R4Folder? Folder { get; set; }
+    [Parameter] public R4Cheat? Cheat { get; set; }
+    [Parameter] public string[] MasterCodes { get; set; } = [];
+    [Parameter] public List<string> CheatCodeRows { get; set; } = [];
+
+    [Parameter] public EventCallback<ChangeEventArgs> OnGameIdInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnGameTitleInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnGameChecksumInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnGameEnabledChanged { get; set; }
+    [Parameter] public Action<int, ChangeEventArgs>? OnMasterCodeInput { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnRomFileSelected { get; set; }
+
+    [Parameter] public EventCallback<ChangeEventArgs> OnFolderTitleInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnFolderDescriptionInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnFolderOneHotChanged { get; set; }
+
+    [Parameter] public EventCallback<ChangeEventArgs> OnCheatTitleInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
+    [Parameter] public Action<int, ChangeEventArgs>? OnCheatBlockInput { get; set; }
+    [Parameter] public EventCallback OnAddCheatRow { get; set; }
+    [Parameter] public Action<int>? OnRemoveCheatRow { get; set; }
+}

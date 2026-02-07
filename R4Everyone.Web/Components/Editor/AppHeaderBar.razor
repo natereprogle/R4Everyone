@@ -1,0 +1,32 @@
+<div class="app-header">
+    <div class="app-title">
+        <div class="title">Cheat Database Editor</div>
+        <div class="subtitle">@Subtitle</div>
+    </div>
+    <div class="app-status">
+        @if (IsDirty)
+        {
+            <span class="badge text-bg-warning">Unsaved changes</span>
+        }
+        @if (!IsValid)
+        {
+            <span class="badge text-bg-danger">@ValidationBadgeText</span>
+        }
+        else
+        {
+            <span class="badge text-bg-success">Valid</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? FileName { get; set; }
+    [Parameter] public bool HasLoadedFile { get; set; }
+    [Parameter] public bool IsDirty { get; set; }
+    [Parameter] public bool IsValid { get; set; }
+    [Parameter] public IReadOnlyList<string> Errors { get; set; } = [];
+
+    private string Subtitle => HasLoadedFile ? $"File: {FileName}" : "No file loaded";
+
+    private string ValidationBadgeText => $"{Errors.Count} errors";
+}

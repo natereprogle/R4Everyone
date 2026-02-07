@@ -1,0 +1,60 @@
+<div class="row g-3">
+    <div class="col-md-4">
+        <label class="form-label">Game ID</label>
+        <input class="form-control" maxlength="4" value="@Game.GameId" @oninput="OnGameIdInput"/>
+        <div class="form-text">4 characters. Leave blank if unknown.</div>
+    </div>
+    <div class="col-md-8">
+        <label class="form-label">Title</label>
+        <input class="form-control" value="@Game.GameTitle" @oninput="OnGameTitleInput"/>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Checksum</label>
+        <input class="form-control" maxlength="8" value="@Game.GameChecksum" @oninput="OnGameChecksumInput"/>
+        <div class="form-text">8 hex characters.</div>
+    </div>
+    <div class="col-md-4 d-flex align-items-center">
+        <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" checked="@Game.GameEnabled"
+                   @onchange="OnGameEnabledChanged"/>
+            <label class="form-check-label">Enabled</label>
+        </div>
+    </div>
+    <div class="rom-loader">
+        <div class="section-title">Calculate from ROM</div>
+        <div class="form-text">If you have a ROM file, you may calculate the Game ID and Checksum by opening it. No files are ever sent to the server.</div>
+        <label class="btn btn-outline-secondary">
+            Select ROM
+            <InputFile class="d-none" OnChange="OnRomFileSelected" accept=".nds"/>
+        </label>
+    </div>
+</div>
+
+<hr/>
+
+<div class="mastercodes">
+    <div class="section-title">Master Codes</div>
+    @for (var i = 0; i < MasterCodes.Length; i++)
+    {
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="text-muted">@((i + 1).ToString("D2"))</span>
+
+            @{
+                var index = i;
+            }
+            <input class="form-control code-input" value="@MasterCodes[index]"
+                   @oninput="(e) => OnMasterCodeInput?.Invoke(index, e)"/>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public R4Game Game { get; set; } = null!;
+    [Parameter] public string[] MasterCodes { get; set; } = [];
+    [Parameter] public EventCallback<ChangeEventArgs> OnGameIdInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnGameTitleInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnGameChecksumInput { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnGameEnabledChanged { get; set; }
+    [Parameter] public Action<int, ChangeEventArgs>? OnMasterCodeInput { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnRomFileSelected { get; set; }
+}
