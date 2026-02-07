@@ -1,0 +1,38 @@
+@implements IDisposable
+@inject EditorState Editor
+
+<div class="treeview" @onclick="HandleBlankClick">
+    @if (Editor.Database == null || Editor.Database.Games.Count == 0)
+    {
+        <div class="text-muted small">No games yet. Create or open a file to begin.</div>
+    }
+    else
+    {
+        @foreach (var game in Editor.Database.Games)
+        {
+            <TreeNode Game="game" Level="0" />
+        }
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Editor.StateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleBlankClick()
+    {
+        Editor.Deselect();
+    }
+
+    public void Dispose()
+    {
+        Editor.StateChanged -= HandleStateChanged;
+    }
+}

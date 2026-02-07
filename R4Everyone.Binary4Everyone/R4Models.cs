@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-namespace R4Everyone.Binary4Everyone;
+﻿namespace R4Everyone.Binary4Everyone;
 
 public interface IR4Item
 {

@@ -33,7 +33,16 @@ public sealed class R4Database : IAsyncDisposable
             throw new FileNotFoundException("The specified file does not exist.", filePath);
 
         await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        using var reader = new BinaryReader(fs);
+        await ValidateDatabaseAsync(fs);
+    }
+
+    public static Task ValidateDatabaseAsync(Stream stream)
+    {
+        if (!stream.CanRead || !stream.CanSeek)
+            throw new InvalidOperationException("Stream must be readable and seekable.");
+
+        using var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
+        stream.Seek(0, SeekOrigin.Begin);
 
         var header = reader.ReadBytes(HeaderSize);
         // Validate that the database is at minimum 100 bytes. If not, we can guarantee it's invalid
@@ -61,6 +70,7 @@ public sealed class R4Database : IAsyncDisposable
                 "Encoding method is not valid");
 
         Log.Verbose("Encoding method is valid");
+        return Task.CompletedTask;
     }
 
     /// <summary>

@@ -1,0 +1,227 @@
+:root {
+    --app-bg: #f2efe8;
+    --panel-bg: #ffffff;
+    --accent: #1f2a30;
+    --accent-light: #2f3e46;
+    --border-color: #d6d1c5;
+    --highlight: #e7efe7;
+}
+
+html,
+body,
+#app {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+    background: var(--app-bg);
+    color: #1f2428;
+    overflow: hidden;
+}
+
+.app-root {
+    height: 100%;
+}
+
+.app-shell {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    background: var(--accent);
+    color: #f7f5f0;
+    border-bottom: 2px solid #151e22;
+}
+
+.app-title .title {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.app-title .subtitle {
+    font-size: 0.9rem;
+    color: #d7d2c6;
+}
+
+.app-status {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.app-body {
+    flex: 1;
+    min-height: 0;
+    padding: 1.5rem;
+}
+
+.panel-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+}
+
+.panel-card .card-header {
+    background: #f9f7f2;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.controls-panel {
+    flex: 0 0 27%;
+}
+
+.tree-panel {
+    flex: 1;
+}
+
+.details-panel {
+    flex: 1;
+}
+
+.actions-panel {
+    flex: 0 0 30%;
+}
+
+.treeview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.95rem;
+}
+
+.tree-node-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.tree-node-row:hover {
+    background: #f3efe5;
+    border-color: var(--border-color);
+}
+
+.tree-node-row.selected {
+    background: var(--highlight);
+    border-color: #8d9b8f;
+}
+
+.tree-toggle {
+    border: none;
+    background: #f0ebe0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 0.4rem;
+    font-weight: 700;
+    color: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tree-toggle:disabled {
+    background: #f0ebe0;
+    color: #b0a99f;
+}
+
+.tree-toggle-placeholder {
+    opacity: 0.3;
+}
+
+.tree-node-type {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tree-node-name {
+    flex: 1;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.section-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--accent-light);
+}
+
+.code-input {
+    font-family: "Courier New", monospace;
+    text-transform: uppercase;
+}
+
+.code-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.validation-list {
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.75rem;
+    font-size: 0.85rem;
+    color: #8b2c2c;
+}
+
+.validation-list ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.empty-state {
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+.desktop-warning {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.desktop-warning .card {
+    max-width: 420px;
+    border: 1px solid var(--border-color);
+    background: var(--panel-bg);
+}
+
+.not-found {
+    padding: 2rem;
+}
+
+@media (max-width: 991.98px) {
+    body {
+        overflow: auto;
+    }
+}

@@ -1,0 +1,494 @@
+@page "/"
+@implements IDisposable
+@inject EditorState Editor
+@inject ViewportService Viewport
+@inject IJSRuntime Js
+
+<PageTitle>R4Everyone</PageTitle>
+
+@if (!_isDesktop)
+{
+    <div class="desktop-warning">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h1 class="h4 mb-2">Desktop required</h1>
+                <p class="mb-0">This app is designed for desktop. Please open it on a desktop browser.</p>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="app-shell">
+        <header class="app-header">
+            <div class="app-title">
+                <div class="title">R4Everyone</div>
+                <div class="subtitle">@FileStatusText</div>
+            </div>
+            <div class="app-status">
+                @if (Editor.IsDirty)
+                {
+                    <span class="badge text-bg-warning">Unsaved changes</span>
+                }
+                @if (!Editor.IsValid)
+                {
+                    <span class="badge text-bg-danger">@ValidationBadgeText</span>
+                }
+                else
+                {
+                    <span class="badge text-bg-success">Valid</span>
+                }
+            </div>
+        </header>
+
+        <div class="app-body container-fluid">
+            <div class="row h-100 g-3">
+                <div class="col-lg-3 h-100 d-flex flex-column gap-3">
+                    <div class="card panel-card controls-panel shadow-sm">
+                        <div class="card-header">File Controls</div>
+                        <div class="card-body panel-body">
+                            <button class="btn btn-outline-primary w-100" @onclick="Editor.NewFile">New File</button>
+                            <label class="btn btn-outline-secondary w-100">
+                                Open File
+                                <InputFile class="d-none" OnChange="OnOpenFileSelected" accept=".dat"/>
+                            </label>
+                            <button class="btn btn-primary w-100" @onclick="SaveAsync" disabled="@(!CanSave)">Save
+                                File
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card panel-card tree-panel shadow-sm">
+                        <div class="card-header">Games</div>
+                        <div class="card-body panel-body">
+                            <TreeView/>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-9 h-100 d-flex flex-column gap-3">
+                    <div class="card panel-card details-panel shadow-sm">
+                        <div class="card-header">@DetailsHeader</div>
+                        <div class="card-body panel-body">
+                            @switch (Editor.SelectionKind)
+                            {
+                                case SelectionKind.Game when Editor.SelectedGame != null:
+                                {
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Game ID</label>
+                                            <input class="form-control" maxlength="4"
+                                                   value="@Editor.SelectedGame.GameId" @oninput="OnGameIdInput"/>
+                                            <div class="form-text">4 characters. Leave blank if unknown.</div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <label class="form-label">Title</label>
+                                            <input class="form-control" value="@Editor.SelectedGame.GameTitle"
+                                                   @oninput="OnGameTitleInput"/>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Checksum</label>
+                                            <input class="form-control" maxlength="8"
+                                                   value="@Editor.SelectedGame.GameChecksum"
+                                                   @oninput="OnGameChecksumInput"/>
+                                            <div class="form-text">8 hex characters.</div>
+                                        </div>
+                                        <div class="rom-loader">
+                                            <div class="section-title">Calculate ID and Checksum from ROM</div>
+                                            <InputFile OnChange="OnRomFileSelected" accept=".nds"/>
+                                        </div>
+                                        <div class="col-md-4 d-flex align-items-center">
+                                            <div class="form-check mt-4">
+                                                <input class="form-check-input" type="checkbox"
+                                                       checked="@Editor.SelectedGame.GameEnabled"
+                                                       @onchange="OnGameEnabledChanged"/>
+                                                <label class="form-check-label">Enabled</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <hr/>
+
+                                    <div class="mastercodes">
+                                        <div class="section-title">Master Codes</div>
+                                        @for (var i = 0; i < MasterCodes.Length; i++)
+                                        {
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <span class="text-muted">@((i + 1).ToString("D2"))</span>
+
+                                                @{
+                                                    var index = i;
+                                                }
+                                                <input class="form-control code-input" value="@MasterCodes[index]"
+                                                       @oninput="(e) => OnMasterCodeInput(index, e)"/>
+                                            </div>
+                                        }
+                                    </div>
+                                    break;
+                                }
+                                case SelectionKind.Folder when Editor.SelectedFolder != null:
+                                {
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Title</label>
+                                            <input class="form-control" value="@Editor.SelectedFolder.Title"
+                                                   @oninput="OnFolderTitleInput"/>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Description</label>
+                                            <textarea class="form-control" rows="4"
+                                                      @oninput="OnFolderDescriptionInput">@Editor.SelectedFolder.Description</textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       checked="@Editor.SelectedFolder.OneHot"
+                                                       @onchange="OnFolderOneHotChanged"/>
+                                                <label class="form-check-label">One Hot</label>
+                                            </div>
+                                            @if (Editor.SelectedFolder.OneHot)
+                                            {
+                                                <div class="form-text">Only one cheat in this folder can be enabled at a
+                                                    time.
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    break;
+                                }
+                                case SelectionKind.Cheat when Editor.SelectedCheat != null:
+                                {
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Title</label>
+                                            <input class="form-control" value="@Editor.SelectedCheat.Title"
+                                                   @oninput="OnCheatTitleInput"/>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Description</label>
+                                            <textarea class="form-control" rows="4"
+                                                      @oninput="OnCheatDescriptionInput">@Editor.SelectedCheat.Description</textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       checked="@Editor.SelectedCheat.Enabled"
+                                                       @onchange="OnCheatEnabledChanged"/>
+                                                <label class="form-check-label">Enabled</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <hr/>
+
+                                    <div class="codes-editor">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div class="section-title">Codes</div>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="AddCheatRow">Add
+                                                Row
+                                            </button>
+                                        </div>
+                                        @for (var rowIndex = 0; rowIndex < CheatCodeRows.Count / 2; rowIndex++)
+                                        {
+                                            var leftIndex = rowIndex * 2;
+                                            var rightIndex = leftIndex + 1;
+                                            <div class="code-row">
+                                                <input class="form-control code-input" value="@CheatCodeRows[leftIndex]"
+                                                       @oninput="(e) => OnCheatBlockInput(leftIndex, e)"/>
+                                                <input class="form-control code-input"
+                                                       value="@CheatCodeRows[rightIndex]"
+                                                       @oninput="(e) => OnCheatBlockInput(rightIndex, e)"/>
+
+                                                @{
+                                                    var index = rowIndex;
+                                                }
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => RemoveCheatRow(index)">Remove
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                    break;
+                                }
+                                default:
+                                    <div class="empty-state">Select an item to edit its details.</div>
+                                    break;
+                            }
+                        </div>
+                    </div>
+
+                    <div class="card panel-card actions-panel shadow-sm">
+                        <div class="card-header">Actions</div>
+                        <div class="card-body panel-body">
+                            <div class="action-grid">
+                                <button class="btn btn-success" @onclick="Editor.AddGame">Add Game</button>
+                                <button class="btn btn-success" @onclick="Editor.AddCheat" disabled="@(!CanAddCheat)">
+                                    Add Cheat
+                                </button>
+                                <button class="btn btn-success" @onclick="Editor.AddFolder" disabled="@(!CanAddFolder)">
+                                    Add Folder
+                                </button>
+                                <button class="btn btn-danger" @onclick="Editor.RemoveSelected"
+                                        disabled="@(!CanRemoveCheat)">Remove Cheat
+                                </button>
+                                <button class="btn btn-danger" @onclick="Editor.RemoveSelected"
+                                        disabled="@(!CanRemoveFolder)">Remove Folder
+                                </button>
+                                <button class="btn btn-danger" @onclick="Editor.RemoveSelected"
+                                        disabled="@(!CanRemoveGame)">Remove Game
+                                </button>
+                            </div>
+
+                            @if (!Editor.IsValid)
+                            {
+                                <div class="validation-list">
+                                    <div class="section-title">Validation</div>
+                                    <ul>
+                                        @foreach (var error in Editor.ValidationErrors)
+                                        {
+                                            <li>@error</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isDesktop = true;
+
+    private string FileStatusText => Editor.HasLoadedFile
+        ? $"File: {Editor.LoadedFileName}"
+        : "No file loaded";
+
+    private string ValidationBadgeText => $"{Editor.ValidationErrors.Count} errors";
+
+    private string DetailsHeader => Editor.SelectionKind switch
+    {
+        SelectionKind.Game => "Game Details",
+        SelectionKind.Folder => "Folder Details",
+        SelectionKind.Cheat => "Cheat Details",
+        _ => "Select an item"
+    };
+
+    private bool CanSave => Editor.HasLoadedFile && Editor.IsDirty && Editor.IsValid;
+    private bool CanAddFolder => Editor.SelectionKind == SelectionKind.Game;
+    private bool CanAddCheat => Editor.SelectionKind == SelectionKind.Game || Editor.SelectionKind == SelectionKind.Folder;
+    private bool CanRemoveGame => Editor.SelectionKind == SelectionKind.Game;
+    private bool CanRemoveFolder => Editor.SelectionKind == SelectionKind.Folder;
+    private bool CanRemoveCheat => Editor.SelectionKind == SelectionKind.Cheat;
+
+    private string[] MasterCodes => Editor.SelectedGame == null
+        ? []
+        : Editor.GetMasterCodeText(Editor.SelectedGame)
+            .Select(ToBigEndianHex)
+            .ToArray();
+
+    private List<string> CheatCodeRows => Editor.SelectedCheat == null
+        ? []
+        : Editor.GetCheatCodeBlocks(Editor.SelectedCheat)
+            .Select(ToBigEndianHex)
+            .ToList();
+
+    protected override void OnInitialized()
+    {
+        Editor.StateChanged += HandleStateChanged;
+        Viewport.ViewportChanged += HandleViewportChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Viewport.InitializeAsync();
+            _isDesktop = Viewport.IsDesktop;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleViewportChanged()
+    {
+        _isDesktop = Viewport.IsDesktop;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnGameIdInput(ChangeEventArgs args)
+    {
+        Editor.UpdateGameId(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void OnGameTitleInput(ChangeEventArgs args)
+    {
+        Editor.UpdateGameTitle(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void OnGameChecksumInput(ChangeEventArgs args)
+    {
+        Editor.UpdateGameChecksum(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void OnGameEnabledChanged(ChangeEventArgs args)
+    {
+        Editor.UpdateGameEnabled(args.Value is bool and true);
+    }
+
+    private void OnMasterCodeInput(int index, ChangeEventArgs args)
+    {
+        if (Editor.SelectedGame == null)
+        {
+            return;
+        }
+
+        var input = args.Value?.ToString() ?? string.Empty;
+        Editor.UpdateMasterCode(Editor.SelectedGame, index, ToLittleEndianHex(input));
+    }
+
+    private void OnFolderTitleInput(ChangeEventArgs args)
+    {
+        Editor.UpdateFolderTitle(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void OnFolderDescriptionInput(ChangeEventArgs args)
+    {
+        Editor.UpdateFolderDescription(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void OnFolderOneHotChanged(ChangeEventArgs args)
+    {
+        Editor.UpdateFolderOneHot(args.Value is bool and true);
+    }
+
+    private void OnCheatTitleInput(ChangeEventArgs args)
+    {
+        Editor.UpdateCheatTitle(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void OnCheatDescriptionInput(ChangeEventArgs args)
+    {
+        Editor.UpdateCheatDescription(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void OnCheatEnabledChanged(ChangeEventArgs args)
+    {
+        Editor.UpdateCheatEnabled(args.Value is bool and true);
+    }
+
+    private void OnCheatBlockInput(int index, ChangeEventArgs args)
+    {
+        if (Editor.SelectedCheat == null)
+        {
+            return;
+        }
+
+        var input = args.Value?.ToString() ?? string.Empty;
+        Editor.UpdateCheatBlock(Editor.SelectedCheat, index, ToLittleEndianHex(input));
+    }
+
+    private void AddCheatRow()
+    {
+        if (Editor.SelectedCheat == null)
+        {
+            return;
+        }
+
+        Editor.AddCheatRow(Editor.SelectedCheat);
+    }
+
+    private void RemoveCheatRow(int rowIndex)
+    {
+        if (Editor.SelectedCheat == null)
+        {
+            return;
+        }
+
+        Editor.RemoveCheatRow(Editor.SelectedCheat, rowIndex);
+    }
+
+    private async Task OnRomFileSelected(InputFileChangeEventArgs args)
+    {
+        if (Editor.SelectedGame == null)
+        {
+            return;
+        }
+
+        var file = args.File;
+        await using var stream = file.OpenReadStream(1024 * 1024 * 1024);
+        var buffer = new byte[512];
+        var bytesRead = await stream.ReadAsync(buffer);
+
+        if (bytesRead > 0)
+        {
+            var data = buffer.Take(bytesRead).ToArray();
+            Editor.ApplyRomMetadata(data);
+        }
+    }
+
+    private async Task OnOpenFileSelected(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        await using var stream = file.OpenReadStream(50 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+        await Editor.LoadAsync(ms, file.Name);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (!CanSave)
+        {
+            return;
+        }
+
+        var bytes = await Editor.BuildSaveBytesAsync();
+        if (bytes == null)
+        {
+            return;
+        }
+
+        var fileName = string.IsNullOrWhiteSpace(Editor.LoadedFileName) ? "cheats.dat" : Editor.LoadedFileName;
+        await Js.InvokeVoidAsync("downloadFile", fileName, "application/octet-stream", bytes);
+        Editor.MarkSaved();
+    }
+
+    public void Dispose()
+    {
+        Editor.StateChanged -= HandleStateChanged;
+        Viewport.ViewportChanged -= HandleViewportChanged;
+    }
+
+    private static string ToBigEndianHex(string value)
+    {
+        return ReverseEndianHex(value);
+    }
+
+    private static string ToLittleEndianHex(string value)
+    {
+        return ReverseEndianHex(value);
+    }
+
+    private static string ReverseEndianHex(string value)
+    {
+        if (value.Length != 8)
+        {
+            return value;
+        }
+
+        return string.Concat(
+            value.AsSpan(6, 2),
+            value.AsSpan(4, 2),
+            value.AsSpan(2, 2),
+            value.AsSpan(0, 2));
+    }
+
+}

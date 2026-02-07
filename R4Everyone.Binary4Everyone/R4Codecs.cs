@@ -167,7 +167,23 @@ internal sealed class R4DatabaseCodec
         var db = new R4Database { R4FilePath = filePath };
 
         await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        using var reader = new BinaryReader(fs);
+        return await LoadAsync(fs, db);
+    }
+
+    public static async Task<R4Database> LoadAsync(Stream stream)
+    {
+        await R4Database.ValidateDatabaseAsync(stream);
+        var db = new R4Database();
+        return await LoadAsync(stream, db);
+    }
+
+    private static Task<R4Database> LoadAsync(Stream stream, R4Database db)
+    {
+        if (!stream.CanRead || !stream.CanSeek)
+            throw new InvalidOperationException("Stream must be readable and seekable.");
+
+        stream.Seek(0, SeekOrigin.Begin);
+        using var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
 
         // Header parse – same offsets as your existing ParseDatabaseAsync
         reader.BaseStream.Seek(0x10, SeekOrigin.Begin);
@@ -197,7 +213,7 @@ internal sealed class R4DatabaseCodec
             db.Games.Add(R4GameCodec.ReadGame(reader, gameId));
         }
 
-        return db;
+        return Task.FromResult(db);
     }
 
     public async Task SaveAsync(R4Database db, string? filePathOverride = null)
@@ -207,8 +223,27 @@ internal sealed class R4DatabaseCodec
             throw new ArgumentException("The file path does not exist");
 
         db.R4FilePath = path;
-        
-        await using var writer = new BinaryWriter(File.OpenWrite(path));
+
+        await using var fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite);
+        await SaveAsync(db, fs);
+    }
+
+    public Task SaveAsync(R4Database db, Stream stream)
+    {
+        if (!stream.CanWrite || !stream.CanSeek)
+            throw new InvalidOperationException("Stream must be writable and seekable.");
+
+        try
+        {
+            stream.SetLength(0);
+        }
+        catch (NotSupportedException)
+        {
+            // Not all streams support truncation; we'll overwrite from the start.
+        }
+
+        stream.Seek(0, SeekOrigin.Begin);
+        using var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
 
         // Header
         writer.Write("R4 CheatCode"u8.ToArray());
@@ -253,7 +288,8 @@ internal sealed class R4DatabaseCodec
         foreach (var game in db.Games)
             _gameCodec.WriteGame(writer, game);
 
-        writer.Close();
+        writer.Flush();
+        return Task.CompletedTask;
     }
 
     private static List<(R4Game Game, uint Offset)> CalculateGameAddresses(R4Database db)
