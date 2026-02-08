@@ -3,6 +3,7 @@
 @inject EditorState Editor
 @inject ViewportService Viewport
 @inject IJSRuntime Js
+@inject ToastService Toasts
 
 <PageTitle>R4Everyone</PageTitle>
 
@@ -179,6 +180,8 @@ else
     private void OnFolderOneHotChanged(ChangeEventArgs args)
     {
         Editor.UpdateFolderOneHot(args.Value is true);
+        if (args.Value is true)
+            Toasts.ShowInfo("Because 'One Hot' has been enabled, all cheats except the first 'Enabled' cheat (if any) have been disabled. Only one cheat can be enabled in a 'One Hot' folder at a time.");
     }
 
     private void OnCheatTitleInput(ChangeEventArgs args)

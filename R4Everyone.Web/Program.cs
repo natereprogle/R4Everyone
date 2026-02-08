@@ -11,5 +11,6 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<EditorState>();
 builder.Services.AddScoped<ViewportService>();
+builder.Services.AddScoped<ToastService>();
 
 await builder.Build().RunAsync();

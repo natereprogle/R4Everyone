@@ -16,20 +16,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0c3ad0f3-c288-4ed3-a6e2-d67ca6fa3807" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-512.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/manifest.webmanifest" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/service-worker.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/service-worker.published.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/ActionsPanel.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/ActionsPanel.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/AppHeaderBar.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/AppHeaderBar.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/FileControlsPanel.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/FileControlsPanel.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/GameDetailsEditor.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/GameDetailsEditor.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Pages/Home.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Pages/Home.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/R4Everyone.Web.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/R4Everyone.Web.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/State/EditorState.Mutations.cs" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/State/EditorState.Mutations.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/Services/ToastService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Layout/MainLayout.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Layout/MainLayout.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Program.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -215,7 +204,7 @@
       <workItem from="1769903483967" duration="24533000" />
       <workItem from="1769964982044" duration="20896000" />
       <workItem from="1770490746939" duration="119000" />
-      <workItem from="1770490915979" duration="16574000" />
+      <workItem from="1770490915979" duration="16888000" />
     </task>
     <task id="LOCAL-00001" summary="Rewrite GUI into TUI. Most features implemented, need to add saving, saving as, all the controls (Add game, cheat, folder; Remove game, cheat, folder), and actually get the cheat code editor itself working. That part is frustrating me a LOT.">
       <option name="closed" value="true" />
@@ -273,7 +262,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770502944203</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Add PWA support, update README, fix One Hot not disabling all but one cheat in a folder.">
+      <option name="closed" value="true" />
+      <created>1770522970897</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1770522970898</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -288,7 +285,8 @@
     <MESSAGE value="Add unversioned files" />
     <MESSAGE value="Break apart EditorState and Home.razor files into separate components." />
     <MESSAGE value="Fix build" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix build" />
+    <MESSAGE value="Add PWA support, update README, fix One Hot not disabling all but one cheat in a folder." />
+    <option name="LAST_COMMIT_MESSAGE" value="Add PWA support, update README, fix One Hot not disabling all but one cheat in a folder." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
