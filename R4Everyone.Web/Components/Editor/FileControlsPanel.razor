@@ -4,7 +4,7 @@
         <button class="btn btn-outline-primary w-100" @onclick="OnNew">New File</button>
         <label class="btn btn-outline-secondary w-100">
             Open File
-            <InputFile class="d-none" OnChange="OnOpen" accept=".dat" />
+            <InputFile class="d-none" OnChange="@OnOpen" accept=".dat" />
         </label>
         <button class="btn btn-primary w-100" @onclick="OnSave" disabled="@(!CanSave)">Save File</button>
     </div>

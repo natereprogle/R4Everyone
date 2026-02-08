@@ -4,7 +4,7 @@
 @inject ViewportService Viewport
 @inject IJSRuntime Js
 
-<PageTitle>Cheat Database Editor</PageTitle>
+<PageTitle>R4Everyone</PageTitle>
 
 @if (!_isDesktop)
 {
@@ -178,7 +178,7 @@ else
 
     private void OnFolderOneHotChanged(ChangeEventArgs args)
     {
-        Editor.UpdateFolderOneHot(args.Value is bool and true);
+        Editor.UpdateFolderOneHot(args.Value is true);
     }
 
     private void OnCheatTitleInput(ChangeEventArgs args)
@@ -193,7 +193,7 @@ else
 
     private void OnCheatEnabledChanged(ChangeEventArgs args)
     {
-        Editor.UpdateCheatEnabled(args.Value is bool and true);
+        Editor.UpdateCheatEnabled(args.Value is true);
     }
 
     private void OnCheatBlockInput(int index, ChangeEventArgs args)
@@ -250,7 +250,7 @@ else
     private async Task OnOpenFileSelected(InputFileChangeEventArgs args)
     {
         var file = args.File;
-        await using var stream = file.OpenReadStream(50 * 1024 * 1024);
+        await using var stream = file.OpenReadStream(int.MaxValue);
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms);
         ms.Position = 0;

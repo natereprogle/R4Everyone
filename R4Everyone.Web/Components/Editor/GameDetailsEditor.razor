@@ -22,10 +22,10 @@
     </div>
     <div class="rom-loader">
         <div class="section-title">Calculate from ROM</div>
-        <div class="form-text">If you have a ROM file, you may calculate the Game ID and Checksum by opening it. No files are ever sent to the server.</div>
+        <div class="form-text">If you have a ROM file, you may calculate the Game ID and Checksum by opening it. No data ever leaves your device.</div>
         <label class="btn btn-outline-secondary">
             Select ROM
-            <InputFile class="d-none" OnChange="OnRomFileSelected" accept=".nds"/>
+            <InputFile class="d-none" OnChange="@OnRomFileSelected" accept=".nds"/>
         </label>
     </div>
 </div>

@@ -16,7 +16,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0c3ad0f3-c288-4ed3-a6e2-d67ca6fa3807" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/static.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/static.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-512.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/manifest.webmanifest" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/service-worker.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/service-worker.published.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/ActionsPanel.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/ActionsPanel.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/AppHeaderBar.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/AppHeaderBar.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/FileControlsPanel.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/FileControlsPanel.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/GameDetailsEditor.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/GameDetailsEditor.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Pages/Home.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Pages/Home.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/R4Everyone.Web.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/R4Everyone.Web.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/State/EditorState.Mutations.cs" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/State/EditorState.Mutations.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -98,6 +111,9 @@
     <urls />
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="SWEA" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
 }</component>
@@ -199,7 +215,7 @@
       <workItem from="1769903483967" duration="24533000" />
       <workItem from="1769964982044" duration="20896000" />
       <workItem from="1770490746939" duration="119000" />
-      <workItem from="1770490915979" duration="11503000" />
+      <workItem from="1770490915979" duration="16574000" />
     </task>
     <task id="LOCAL-00001" summary="Rewrite GUI into TUI. Most features implemented, need to add saving, saving as, all the controls (Add game, cheat, folder; Remove game, cheat, folder), and actually get the cheat code editor itself working. That part is frustrating me a LOT.">
       <option name="closed" value="true" />
@@ -241,7 +257,23 @@
       <option name="project" value="LOCAL" />
       <updated>1770502384779</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Fix build">
+      <option name="closed" value="true" />
+      <created>1770502699032</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1770502699032</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Fix build">
+      <option name="closed" value="true" />
+      <created>1770502944203</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1770502944203</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

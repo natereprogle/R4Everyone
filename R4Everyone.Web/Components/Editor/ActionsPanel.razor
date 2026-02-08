@@ -33,7 +33,7 @@
     [Parameter] public bool CanRemoveFolder { get; set; }
     [Parameter] public bool CanRemoveCheat { get; set; }
     [Parameter] public bool IsValid { get; set; }
-    [Parameter] public IReadOnlyList<string> Errors { get; set; } = Array.Empty<string>();
+    [Parameter] public IReadOnlyList<string> Errors { get; set; } = [];
 
     [Parameter] public EventCallback OnAddGame { get; set; }
     [Parameter] public EventCallback OnAddFolder { get; set; }

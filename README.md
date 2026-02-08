@@ -1,32 +1,84 @@
 # R4Everyone
 
-R4Everyone is an open-source, modern alternative to r4cce. Both applications were designed to edit
-usrcheat.dat R4 files.
+R4Everyone is an open-source, web-based modern alternative to R4 Cheat Code Editor, known as r4cce. Both applications
+were designed to edit usrcheat.dat R4 files.
 
-## Why an alternative? Doesn't r4cce work just fine?
+# Features & Limitations
 
-r4cce was last updated nearly two decades ago (2009) and, from what I can tell, is no longer maintained. As of today,
-2025-03-01, it appears the website that hosted r4cce may also down. DNS resolves, but the site times out. I cannot find
-any copies of the software online, either (which wouldn't have been allowed anyway due to the licensing). They all go to
-dead .co.jp domains.
+## Features
 
-As well, r4cce was closed-source, and **very** slow (At least, in my testing).Loading a 50MB (Yes, 50 ***MB***) file with 
-r4cce on my Ryzen 9 5900X takes upwards of 5 minutes, and brings my computer to a halt while doing so. Normal user 
-operations are pretty fast, but r4cce struggles with larger files.
+1. WebAssembly, meaning near-native speeds. In the browser. Yeah.
+2. Installable as a PWA, supporting offline use.
+3. Client-side only, no data leaves your device.
 
-R4Everyone is intended to fix these issues. It's designed to be extremely fast, thanks to my custom library, `R4Everyone.Binary4Everyone`.
+## Limitations
+
+1. Not all r4cce features have been implemented (See below).
+2. Not yet fully reactive, meaning it requires a display of at least 992x530 pixels to work.
+3. It does not work on iPhone due to screen size, but it _does_ work on iPad. However, an error appears on the app that
+   says an error occurred and to reload. However, the app will still function. 
+
+## Planned Features
+1. Better cheat code editor (Copy/paste support)
+2. Support for adding triggers
+3. Sorting/moving items
+4. Dark mode
+5. Import/export XML
+6. Mobile support (Fully reactive layout)
+7. Confirmation before deleting games or folders that have content or cheats that have been modified from "default"
+
+# Why R4Everyone when r4cce works just fine?
+
+r4cce works just fine for Windows users only. But, with the prevalence of mobile emulators (Delta), handheld gaming PCs
+(Steam Deck), and other non-Windows devices, plus the fact that r4cce isn't available anymore through official channels,
+an alternative was necessary.
+
+r4cce was last updated nearly two decades ago (2009) and, from what I can tell, is no longer maintained. r4cce was
+hosted on the author's website and, as of today, 2026-02-07, that site is down. DNS seems to resolve, but the site
+times out. I cannot find any copies of the software online, either (which wouldn't have been allowed anyway due to the
+licensing). They all go to dead .co.jp domains. Archive.org does have the website archived, and that's the only place I
+can find to get it safely.
+
+As well, r4cce was closed-source, and **very** slow (At least, in my testing). Loading a 50MB (Yes, 50 ***MB***) file
+with r4cce on my Ryzen 9 5900X took anywhere from 1 to 5 minutes, and sometimes would bring my computer to a halt while
+doing so. Normal user operations are pretty fast, and most users will not experience these limitations when editing
+normal files (read: kilobytes in size), but r4cce struggles with larger files.
+
+R4Everyone is intended to fix these issues. It's designed to be extremely fast, thanks to my library,
+`R4Everyone.Binary4Everyone`.
 
 ## What is `R4Everyone.Binary4Everyone`?
 
-R4Everyone.Binary4Everyone allows extremely fast reads and writes of R4 .dat files. I painstakingly reverse-engineered
-the file format and wrote a library to read and write it. You can see my notes on the file format in the file named
-`File Format.md`.
+`R4Everyone.Binary4Everyone` allows reading and writing of R4 .dat files via modern .NET.
+Using ImHex and weeks of research (Because the file format is so obscure, even AI couldn't help me find resources on
+it), I was able to reverse-engineer the file format and wrote this library to read and write it. My notes on the format
+will be uploaded at a later date, but I already have
+[a blog post about it](https://medium.com/@natereprogle/reverse-engineering-a-long-lost-file-format-usrcheat-dat-2c15fefe2f63)!
 
-## Will R4Everyone ever be cross-compatibility?
+## A "fast" web app? Suuuuuure.
 
-That's the goal. I attempted to start with Avalonia, but the lacking documentation made it difficult to learn and fix issues. As
-someone who's never done desktop development before, it was a huge hurdle, and I need to start small before building up. I
-decided to start using WinUI 3 for now, and slowly move things as I can.
+I get it, JS typically sucks when it comes to "being fast." HOWEVER, R4Everyone _does_ manage to be MUCH faster than JS,
+due to it actually being a Blazor WebAssembly Standalone app! This means that a couple of things:
 
-This project is as much a learning experience for me as it is a tool for the community. I'm learning as I go, and I'm hoping
-the community gets some use out of it in the process!
+1. The app is 100% client-side. It does not communicate with a server, and therefore no data ever leaves your device.
+2. The app is able to maintain its claim of being fast because it's written in .NET, not JS, and .NET compiled to WASM
+   runs at near-native speeds.
+3. The app has been configured as a PWA which means it's also installable on your device, offline.
+4. The app works on Windows, macOS, and Linux. In fact, it works on any device that supports WASM!
+
+## Are there any downsides?
+
+Yes, the app does have some limitations that r4cce does not.
+
+1. r4cce supports all four possible encoding methods that this app does not. This app defaults to UTF8, r4cce supports
+   UTF8, GBK, SJIS, and BIG5. The library _supports_ the other encoding methods, but will use UTF8 regardless.
+2. r4cce supports CycloEvo Cheats and R4/EDGE cheats. This app does not support CycloEvo.
+3. r4cce supports importing/exporting XML, this app does not.
+4. r4cce has an "encrypt file" feature, this app does not.
+5. Sorting/moving items is not yet supported.
+6. Adding "triggers" to cheats is not yet supported (You can't set a trigger to enable the cheat if L + R is held, as an
+   example. r4cce allows this.)
+
+If you need support for any of these features, this app may not support those yet. Side note: If you _have_ knowledge of
+the file format for CycloEvo, please let me know! I investigated it at one point but was not able to figure anything out
+about its format.

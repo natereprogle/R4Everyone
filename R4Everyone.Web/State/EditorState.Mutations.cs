@@ -73,10 +73,7 @@ public partial class EditorState
 
     public void RemoveSelected()
     {
-        if (SelectionKind == SelectionKind.None)
-        {
-            return;
-        }
+        if (SelectionKind == SelectionKind.None) return;
 
         if (SelectionKind == SelectionKind.Game && SelectedGame != null)
         {
@@ -86,10 +83,7 @@ public partial class EditorState
             return;
         }
 
-        if (SelectedGame == null)
-        {
-            return;
-        }
+        if (SelectedGame == null) return;
 
         if (SelectionKind == SelectionKind.Folder && SelectedFolder != null)
         {
@@ -218,6 +212,13 @@ public partial class EditorState
         }
 
         SelectedFolder.OneHot = value;
+        var seen = false;
+        SelectedFolder.Items.ForEach(i =>
+        {
+            if (i is R4Cheat c)
+                c.Enabled = c.Enabled && !seen && (seen = true);
+        });
+
         MarkDirty();
     }
 
