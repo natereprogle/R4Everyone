@@ -39,6 +39,10 @@ public partial class EditorState
         }
 
         IsDirty = true;
+        if (SelectedGame != null)
+        {
+            Database?.MarkGameDirty(SelectedGame);
+        }
         Revalidate();
         NotifyStateChanged();
     }

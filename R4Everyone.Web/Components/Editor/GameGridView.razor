@@ -13,7 +13,9 @@
             <button type="button" class="game-tile" @onclick="() => OnGameSelected.InvokeAsync(game)">
                 @if (!string.IsNullOrWhiteSpace(imageUrl))
                 {
-                    <img class="game-tile-image" src="@imageUrl" alt="@title"/>
+                    <object type="image/jpeg" data="@imageUrl" class="game-tile-image" alt="@title">
+                        <img src="assets/failed_cover_fetch.webp" alt="@title | Failed to fetch cover art"/>
+                    </object>
                 }
                 else
                 {
@@ -88,9 +90,12 @@
 
     private bool IsLoading(R4Game game)
     {
-        if (!_imageTasks.TryGetValue(game, out var entry) || entry.Task.IsCompleted)
+        if (!_imageTasks.TryGetValue(game, out var entry))
             return false;
 
+        if (entry.Task.IsCompletedSuccessfully && !string.IsNullOrWhiteSpace(entry.Task.Result))
+            return false;
+        
         return DateTime.UtcNow - entry.StartedAt < TimeSpan.FromSeconds(10);
     }
 

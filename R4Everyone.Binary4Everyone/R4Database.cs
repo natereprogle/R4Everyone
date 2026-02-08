@@ -1,4 +1,5 @@
-﻿using System.Text;
+using System.Text;
+using System.Collections.Generic;
 using Serilog;
 
 namespace R4Everyone.Binary4Everyone;
@@ -7,6 +8,9 @@ public sealed class R4Database : IAsyncDisposable
 {
     private const int HeaderSize = 0x100;
     private const string MagicString = "R4 CheatCode";
+
+    internal byte[]? SnapshotBytes { get; private set; }
+    internal Dictionary<R4Game, R4LazyGameSlot> LazySlots { get; } = new();
 
     public R4Encoding FileEncoding;
     public string Title = "User cheat code v1.0";
@@ -25,6 +29,50 @@ public sealed class R4Database : IAsyncDisposable
         Title = title;
         FileEncoding = encoding;
         Enabled = enabled;
+    }
+
+    public void EnsureGameMaterialized(R4Game game)
+    {
+        if (LazySlots.TryGetValue(game, out var slot))
+        {
+            slot.EnsureMaterialized();
+        }
+    }
+
+    public void MaterializeAllGames()
+    {
+        foreach (var slot in LazySlots.Values)
+        {
+            slot.EnsureMaterialized();
+        }
+    }
+
+    public void MarkGameDirty(R4Game game)
+    {
+        if (LazySlots.TryGetValue(game, out var slot))
+        {
+            slot.MarkDirty();
+            return;
+        }
+
+        LazySlots[game] = R4LazyGameSlot.CreateNew(this, game);
+    }
+
+    internal void SetSnapshot(byte[] snapshotBytes)
+    {
+        SnapshotBytes = snapshotBytes;
+    }
+
+    internal R4LazyGameSlot GetOrCreateSlot(R4Game game)
+    {
+        if (LazySlots.TryGetValue(game, out var slot))
+        {
+            return slot;
+        }
+
+        var created = R4LazyGameSlot.CreateNew(this, game);
+        LazySlots[game] = created;
+        return created;
     }
 
     public static async Task ValidateDatabaseAsync(string filePath)
@@ -83,3 +131,4 @@ public sealed class R4Database : IAsyncDisposable
         await Task.CompletedTask;
     }
 }
+

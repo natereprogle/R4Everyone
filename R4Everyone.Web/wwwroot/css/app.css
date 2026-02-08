@@ -204,10 +204,10 @@ body {
 
 .game-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, max-content));
+    grid-template-columns: repeat(auto-fit, 202px);
     gap: 1rem;
     align-content: start;
-    justify-content: start;
+    justify-content: space-evenly;
     height: 100%;
     overflow: auto;
     padding: 0.25rem;
@@ -221,7 +221,7 @@ body {
     padding: 0;
     display: flex;
     flex-direction: column;
-    width: min-content;
+    width: 100%;
     align-self: start;
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
