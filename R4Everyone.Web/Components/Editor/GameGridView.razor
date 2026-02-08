@@ -1,3 +1,6 @@
+@inject IJSRuntime Js
+@implements IDisposable
+
 <div class="game-grid">
     @if (Games == null || Games.Count == 0)
     {
@@ -8,24 +11,28 @@
         @foreach (var game in Games)
         {
             var title = EditorState.GetGameDisplayTitle(game);
-            var imageUrl = GetImageUrl(game);
-            var isLoading = IsLoading(game);
-            <button type="button" class="game-tile" @onclick="() => OnGameSelected.InvokeAsync(game)">
-                @if (!string.IsNullOrWhiteSpace(imageUrl))
-                {
-                    <img class="game-tile-image" src="@imageUrl" alt="@title"/>
-                }
-                else
-                {
-                    <div class="game-image-frame">
+            var gameId = game.GameId;
+            var imageUrl = GetImageUrl(gameId);
+            var isLoading = IsLoading(gameId);
+            <button type="button" class="game-tile" data-game-id="@gameId"
+                    @onclick="() => OnGameSelected.InvokeAsync(game)">
+                <div class="game-image-frame">
+                    @if (!string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        <object type="image/jpeg" data="@imageUrl" class="game-tile-image @(isLoading ? "loading" : "")" alt="@title">
+                            <img class="game-tile-image" src="assets/failed_cover_fetch.webp" alt="@title | Failed to fetch cover art"/>
+                        </object>
+                    }
+                    else
+                    {
                         <img class="game-tile-image @(isLoading ? "loading" : "")" src="assets/unknown_game_cover.webp"
                              alt="Unknown cover art"/>
-                        @if (isLoading)
-                        {
-                            <div class="game-image-loading-bar"></div>
-                        }
-                    </div>
-                }
+                    }
+                    @if (isLoading)
+                    {
+                        <div class="game-image-loading-bar"></div>
+                    }
+                </div>
                 <div class="game-tile-body">
                     <div class="game-tile-title">@title</div>
                     @if (!string.IsNullOrWhiteSpace(game.GameId))
@@ -42,30 +49,54 @@
     [Parameter] public IReadOnlyList<R4Game>? Games { get; set; }
     [Parameter] public EventCallback<R4Game> OnGameSelected { get; set; }
     [Parameter] public Func<R4Game, Task<string?>>? ImageUrlSelector { get; set; }
-    private readonly Dictionary<R4Game, (string GameId, Task<string?> Task, DateTime StartedAt)> _imageTasks = new();
+    private readonly Dictionary<string, (Task<string?> Task, DateTime StartedAt)> _imageTasks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _requestedGameIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, R4Game> _gamesById = new(StringComparer.OrdinalIgnoreCase);
+    private DotNetObjectReference<GameGridView>? _dotNetRef;
 
     protected override async Task OnParametersSetAsync()
     {
         if (Games == null || ImageUrlSelector == null)
         {
             _imageTasks.Clear();
+            _requestedGameIds.Clear();
+            _gamesById.Clear();
             return;
         }
 
+        _gamesById.Clear();
         foreach (var game in Games)
         {
-            var gameId = game.GameId;
-            if (_imageTasks.TryGetValue(game, out var entry) && entry.GameId == gameId)
+            if (string.IsNullOrWhiteSpace(game.GameId))
                 continue;
 
-            _imageTasks[game] = (gameId, LoadImageAsync(game), DateTime.UtcNow);
+            _gamesById[game.GameId] = game;
         }
 
-        var currentGames = new HashSet<R4Game>(Games);
-        foreach (var game in _imageTasks.Keys.ToList().Where(game => !currentGames.Contains(game)))
-            _imageTasks.Remove(game);
+        var currentIds = new HashSet<string>(_gamesById.Keys, StringComparer.OrdinalIgnoreCase);
+        foreach (var gameId in _imageTasks.Keys.ToList().Where(gameId => !currentIds.Contains(gameId)))
+            _imageTasks.Remove(gameId);
+
+        foreach (var gameId in _requestedGameIds.ToList().Where(gameId => !currentIds.Contains(gameId)))
+            _requestedGameIds.Remove(gameId);
 
         await Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        await Js.InvokeVoidAsync("r4eLazyImages.observeAll", _dotNetRef);
+    }
+
+    [JSInvokable]
+    public Task NotifyVisible(string gameId)
+    {
+        if (string.IsNullOrWhiteSpace(gameId) || !_requestedGameIds.Add(gameId) || _imageTasks.ContainsKey(gameId) || !_gamesById.TryGetValue(gameId, out var game))
+            return Task.CompletedTask;
+
+        _imageTasks[gameId] = (LoadImageAsync(game), DateTime.UtcNow);
+        return InvokeAsync(StateHasChanged);
     }
 
     private async Task<string?> LoadImageAsync(R4Game game)
@@ -78,20 +109,30 @@
         return url;
     }
 
-    private string? GetImageUrl(R4Game game)
+    private string? GetImageUrl(string? gameId)
     {
-        if (_imageTasks.TryGetValue(game, out var entry) && entry.Task.IsCompletedSuccessfully)
+        if (string.IsNullOrWhiteSpace(gameId))
+            return null;
+
+        if (_imageTasks.TryGetValue(gameId, out var entry) && entry.Task.IsCompletedSuccessfully)
             return entry.Task.Result;
 
         return null;
     }
 
-    private bool IsLoading(R4Game game)
+    private bool IsLoading(string? gameId)
     {
-        if (!_imageTasks.TryGetValue(game, out var entry) || entry.Task.IsCompleted)
+        if (string.IsNullOrWhiteSpace(gameId))
+            return false;
+
+        if (!_imageTasks.TryGetValue(gameId, out var entry))
             return false;
 
         return DateTime.UtcNow - entry.StartedAt < TimeSpan.FromSeconds(10);
     }
 
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
 }

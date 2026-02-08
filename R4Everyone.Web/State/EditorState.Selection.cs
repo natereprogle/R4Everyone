@@ -34,6 +34,7 @@ public partial class EditorState
 
         if (SelectedGame != null)
         {
+            Database?.EnsureGameMaterialized(SelectedGame);
             EnsureMasterCodes(SelectedGame);
             EnsureMasterCodeBuffer(SelectedGame);
         }

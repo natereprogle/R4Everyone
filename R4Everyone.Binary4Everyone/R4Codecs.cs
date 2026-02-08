@@ -104,6 +104,30 @@ internal sealed class R4GameCodec
 {
     private readonly R4ItemCodec _items = new();
 
+    public static void ReadGameHeader(BinaryReader reader, R4Game game)
+    {
+        var meta = R4Binary.ReadItemMeta(reader, game: true);
+        game.GameTitle = meta.Title;
+
+        reader.ReadUInt16(); // item count (flattened)
+
+        var enabledBytes = reader.ReadBytes(2);
+        if (enabledBytes.Length < 2)
+            throw new InvalidDataException("Incomplete data for game enabled flag.");
+        game.GameEnabled = enabledBytes[1] == 240;
+
+        var masterCodes = new uint[8];
+        for (var i = 0; i < masterCodes.Length; i++)
+        {
+            var bytes = reader.ReadBytes(4);
+            if (bytes.Length < 4)
+                throw new InvalidDataException("Incomplete data for master code.");
+            masterCodes[i] = BitConverter.ToUInt32(bytes);
+        }
+
+        game.MasterCodes = masterCodes;
+    }
+
     public static R4Game ReadGame(BinaryReader reader, string gameId)
     {
         var game = new R4Game(gameId)
@@ -165,24 +189,29 @@ internal sealed class R4DatabaseCodec
         await R4Database.ValidateDatabaseAsync(filePath);
 
         var db = new R4Database { R4FilePath = filePath };
-
-        await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        return await LoadAsync(fs, db);
+        var snapshot = await File.ReadAllBytesAsync(filePath);
+        return LoadFromSnapshot(snapshot, db);
     }
 
     public static async Task<R4Database> LoadAsync(Stream stream)
     {
         await R4Database.ValidateDatabaseAsync(stream);
-        var db = new R4Database();
-        return await LoadAsync(stream, db);
-    }
 
-    private static Task<R4Database> LoadAsync(Stream stream, R4Database db)
-    {
         if (!stream.CanRead || !stream.CanSeek)
             throw new InvalidOperationException("Stream must be readable and seekable.");
 
         stream.Seek(0, SeekOrigin.Begin);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+
+        var db = new R4Database();
+        return LoadFromSnapshot(ms.ToArray(), db);
+    }
+
+    private static R4Database LoadFromSnapshot(byte[] snapshot, R4Database db)
+    {
+        db.SetSnapshot(snapshot);
+        using var stream = new MemoryStream(snapshot, writable: false);
         using var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
 
         // Header parse – same offsets as your existing ParseDatabaseAsync
@@ -193,7 +222,7 @@ internal sealed class R4DatabaseCodec
         db.Enabled = reader.ReadByte() == 1;
 
         // Game pointer table: [4 gameId][4 checksum][4 offset][4 padding]
-        var gamesByOffset = new SortedDictionary<uint, string>();
+        var entries = new List<(string GameId, string Checksum, uint Offset)>();
         reader.BaseStream.Seek(0x100, SeekOrigin.Begin);
 
         while (reader.BaseStream.Position < reader.BaseStream.Length)
@@ -203,17 +232,31 @@ internal sealed class R4DatabaseCodec
             if (chunk.All(b => b == 0x00)) break;
 
             var gameId = Encoding.ASCII.GetString(chunk.Take(4).ToArray());
+            var checksumBytes = chunk.Skip(4).Take(4).ToArray();
+            Array.Reverse(checksumBytes);
+            var checksum = string.Concat(checksumBytes.Select(b => b.ToString("X2")));
             var offset = BitConverter.ToUInt32(chunk.Skip(8).Take(4).ToArray(), 0);
-            gamesByOffset[offset] = gameId;
+            entries.Add((gameId, checksum, offset));
         }
 
-        foreach (var (offset, gameId) in gamesByOffset)
+        var ordered = entries.OrderBy(e => e.Offset).ToList();
+        for (var i = 0; i < ordered.Count; i++)
         {
+            var (gameId, checksum, offset) = ordered[i];
+            var nextOffset = i + 1 < ordered.Count ? ordered[i + 1].Offset : (uint)snapshot.Length;
+            var length = nextOffset >= offset ? nextOffset - offset : 0;
+
             reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-            db.Games.Add(R4GameCodec.ReadGame(reader, gameId));
+            var game = new R4Game(gameId)
+            {
+                GameChecksum = checksum
+            };
+            R4GameCodec.ReadGameHeader(reader, game);
+            db.Games.Add(game);
+            db.LazySlots[game] = R4LazyGameSlot.CreateExisting(db, game, offset, length);
         }
 
-        return Task.FromResult(db);
+        return db;
     }
 
     public async Task SaveAsync(R4Database db, string? filePathOverride = null)
@@ -257,24 +300,33 @@ internal sealed class R4DatabaseCodec
 
         writer.Write(db.Enabled ? (byte)0x01 : (byte)0x00);
 
+        var writePlans = BuildWritePlans(db);
+        var addressBookSize = (uint)(writePlans.Count * 16 + 16);
+        var blobRegionStart = 0x100u + addressBookSize;
+
+        var currentOffset = blobRegionStart;
+        foreach (var plan in writePlans)
+        {
+            plan.Offset = currentOffset;
+            currentOffset += plan.Length;
+        }
+
         // Address block
         writer.Seek(0x0100, SeekOrigin.Begin);
-        var gameOffsetPairs = CalculateGameAddresses(db);
-
-        foreach (var (game, offset) in gameOffsetPairs)
+        foreach (var plan in writePlans)
         {
-            var gameIdBytes = Encoding.ASCII.GetBytes(game.GameId.PadRight(4)[..4]);
+            var gameIdBytes = Encoding.ASCII.GetBytes(plan.Game.GameId.PadRight(4)[..4]);
             writer.Write(gameIdBytes);
 
             var checksumBytes = Enumerable.Range(0, 8)
                 .Where(x => x % 2 == 0)
-                .Select(x => Convert.ToByte(game.GameChecksum.Substring(x, 2), 16))
+                .Select(x => Convert.ToByte(plan.Game.GameChecksum.Substring(x, 2), 16))
                 .ToArray();
 
             Array.Reverse(checksumBytes);
             writer.Write(checksumBytes);
 
-            writer.Write(offset);
+            writer.Write(plan.Offset);
 
             var bytesWritten = gameIdBytes.Length + checksumBytes.Length + sizeof(uint);
             var padding = 16 - bytesWritten;
@@ -285,27 +337,65 @@ internal sealed class R4DatabaseCodec
         writer.Write(new byte[16]); // terminator row
 
         // Games
-        foreach (var game in db.Games)
-            _gameCodec.WriteGame(writer, game);
+        foreach (var plan in writePlans)
+        {
+            if (plan.Bytes != null)
+            {
+                writer.Write(plan.Bytes);
+                continue;
+            }
+
+            var raw = plan.Slot.GetRawSlice();
+            writer.Write(raw.Span);
+        }
 
         writer.Flush();
         return Task.CompletedTask;
     }
 
-    private static List<(R4Game Game, uint Offset)> CalculateGameAddresses(R4Database db)
+    private sealed class GameWritePlan
     {
-        uint currentOffset = 0x100;
-
-        var addressBlockSize = (uint)(db.Games.Count * 16);
-        currentOffset += addressBlockSize + 16;
-
-        var offsets = new List<(R4Game Game, uint Offset)>();
-        foreach (var game in db.Games)
+        public GameWritePlan(R4Game game, R4LazyGameSlot slot, uint length, byte[]? bytes)
         {
-            offsets.Add((game, currentOffset));
-            currentOffset += game.Size;
+            Game = game;
+            Slot = slot;
+            Length = length;
+            Bytes = bytes;
         }
 
-        return offsets;
+        public R4Game Game { get; }
+        public R4LazyGameSlot Slot { get; }
+        public uint Length { get; }
+        public byte[]? Bytes { get; }
+        public uint Offset { get; set; }
+    }
+
+    private List<GameWritePlan> BuildWritePlans(R4Database db)
+    {
+        var plans = new List<GameWritePlan>(db.Games.Count);
+
+        foreach (var game in db.Games)
+        {
+            var slot = db.GetOrCreateSlot(game);
+            if (slot.CanUseRawSource())
+            {
+                plans.Add(new GameWritePlan(game, slot, slot.SourceLength, bytes: null));
+                continue;
+            }
+
+            var bytes = SerializeGame(game);
+            plans.Add(new GameWritePlan(game, slot, (uint)bytes.Length, bytes));
+        }
+
+        return plans;
+    }
+
+    private byte[] SerializeGame(R4Game game)
+    {
+        using var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms, Encoding.ASCII, leaveOpen: true);
+        _gameCodec.WriteGame(writer, game);
+        writer.Flush();
+        return ms.ToArray();
     }
 }
