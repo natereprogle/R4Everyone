@@ -4,6 +4,7 @@
 @inject ViewportService Viewport
 @inject IJSRuntime Js
 @inject ToastService Toasts
+@inject XmlDataService Xml;
 
 <PageTitle>R4Everyone</PageTitle>
 
@@ -26,82 +27,59 @@ else
 
         <div class="app-body container-fluid">
             <div class="row h-100 g-3">
-                <div class="col-lg-3 h-100 d-flex flex-column gap-3">
+                <div class="col-lg-2 h-100 d-flex flex-column gap-3">
                     <FileControlsPanel CanSave="CanSave" OnNew="OnNewFile" OnOpen="OnOpenFileSelected"
                                        OnSave="SaveAsync"/>
 
-                    <TreePanel Database="Editor.Database" Selected="SelectedItem"/>
-                </div>
-
-                <div class="col-lg-9 h-100 d-flex flex-column gap-3">
-                    <DetailsPanel Header="@DetailsHeader"
-                                  SelectionKind="Editor.SelectionKind"
-                                  Game="Editor.SelectedGame"
-                                  Folder="Editor.SelectedFolder"
-                                  Cheat="Editor.SelectedCheat"
-                                  MasterCodes="MasterCodes"
-                                  CheatCodeRows="CheatCodeRows"
-                                  OnGameIdInput="OnGameIdInput"
-                                  OnGameTitleInput="OnGameTitleInput"
-                                  OnGameChecksumInput="OnGameChecksumInput"
-                                  OnGameEnabledChanged="OnGameEnabledChanged"
-                                  OnMasterCodeInput="OnMasterCodeInput"
-                                  OnRomFileSelected="OnRomFileSelected"
-                                  OnFolderTitleInput="OnFolderTitleInput"
-                                  OnFolderDescriptionInput="OnFolderDescriptionInput"
-                                  OnFolderOneHotChanged="OnFolderOneHotChanged"
-                                  OnCheatTitleInput="OnCheatTitleInput"
-                                  OnCheatDescriptionInput="OnCheatDescriptionInput"
-                                  OnCheatEnabledChanged="OnCheatEnabledChanged"
-                                  OnCheatBlockInput="OnCheatBlockInput"
-                                  OnAddCheatRow="AddCheatRow"
-                                  OnRemoveCheatRow="RemoveCheatRow"/>
-
                     <ActionsPanel CanAddGame="true"
-                                  CanAddFolder="CanAddFolder"
-                                  CanAddCheat="CanAddCheat"
                                   CanRemoveGame="CanRemoveGame"
-                                  CanRemoveFolder="CanRemoveFolder"
-                                  CanRemoveCheat="CanRemoveCheat"
                                   IsValid="Editor.IsValid"
                                   Errors="Editor.ValidationErrors"
-                                  OnAddGame="Editor.AddGame"
-                                  OnAddFolder="Editor.AddFolder"
-                                  OnAddCheat="Editor.AddCheat"
-                                  OnRemoveGame="Editor.RemoveSelected"
-                                  OnRemoveFolder="Editor.RemoveSelected"
-                                  OnRemoveCheat="Editor.RemoveSelected"/>
+                                  OnAddGame="AddGame"
+                                  OnRemoveGame="RemoveGame"/>
+                </div>
+
+                <div class="col-lg-10 h-100">
+                    <GameGridView Games="Editor.Database?.Games ?? []" OnGameSelected="OpenGameModal"
+                                  ImageUrlSelector="OnRenderGame"/>
                 </div>
             </div>
         </div>
+
+        <GameEditorModal IsOpen="IsGameModalOpen"
+                         Game="_modalGame"
+                         MasterCodes="MasterCodes"
+                         CheatCodeRows="CheatCodeRows"
+                         OnClose="@CloseGameModal"
+                         OnGameIdInput="OnGameIdInput"
+                         OnGameTitleInput="OnGameTitleInput"
+                         OnGameChecksumInput="OnGameChecksumInput"
+                         OnGameEnabledChanged="OnGameEnabledChanged"
+                         OnMasterCodeInput="OnMasterCodeInput"
+                         OnRomFileSelected="OnRomFileSelected"
+                         OnFolderTitleInput="OnFolderTitleInput"
+                         OnFolderDescriptionInput="OnFolderDescriptionInput"
+                         OnFolderOneHotChanged="OnFolderOneHotChanged"
+                         OnCheatTitleInput="OnCheatTitleInput"
+                         OnCheatDescriptionInput="OnCheatDescriptionInput"
+                         OnCheatEnabledChanged="OnCheatEnabledChanged"
+                         OnCheatBlockInput="OnCheatBlockInput"
+                         OnAddCheatRow="AddCheatRow"
+                         OnRemoveCheatRow="RemoveCheatRow"/>
     </div>
 }
 
 @code {
     private bool _isDesktop = true;
+    private bool _isGameModalOpen;
+    private R4Game? _modalGame;
 
-    private string DetailsHeader => Editor.SelectionKind switch
-    {
-        SelectionKind.Game => "Game Details",
-        SelectionKind.Folder => "Folder Details",
-        SelectionKind.Cheat => "Cheat Details",
-        _ => "Select an item"
-    };
+    private bool IsGameModalOpen => _isGameModalOpen && _modalGame != null;
 
     private bool CanSave => Editor.HasLoadedFile && Editor.IsDirty && Editor.IsValid;
-    private bool CanAddFolder => Editor.SelectionKind == SelectionKind.Game;
-    private bool CanAddCheat => Editor.SelectionKind == SelectionKind.Game || Editor.SelectionKind == SelectionKind.Folder;
     private bool CanRemoveGame => Editor.SelectionKind == SelectionKind.Game;
-    private bool CanRemoveFolder => Editor.SelectionKind == SelectionKind.Folder;
-    private bool CanRemoveCheat => Editor.SelectionKind == SelectionKind.Cheat;
 
-    private object? SelectedItem => (object?)Editor.SelectedCheat ?? (object?)Editor.SelectedFolder ?? Editor.SelectedGame;
-
-    private string[] MasterCodes => Editor.SelectedGame == null
-        ? []
-        : Editor.GetMasterCodeText(Editor.SelectedGame)
-            .Select(ToBigEndianHex)
-            .ToArray();
+    private string[] MasterCodes => GetMasterCodes();
 
     private List<string> CheatCodeRows => Editor.SelectedCheat == null
         ? []
@@ -127,6 +105,16 @@ else
 
     private void HandleStateChanged()
     {
+        if (_isGameModalOpen && _modalGame != null)
+        {
+            var games = Editor.Database?.Games;
+            if (games == null || !games.Contains(_modalGame))
+            {
+                _isGameModalOpen = false;
+                _modalGame = null;
+            }
+        }
+
         InvokeAsync(StateHasChanged);
     }
 
@@ -134,6 +122,78 @@ else
     {
         _isDesktop = Viewport.IsDesktop;
         InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenGameModal(R4Game game)
+    {
+        _modalGame = game;
+        _isGameModalOpen = true;
+        Editor.Select(SelectionInfo.ForGame(game));
+    }
+
+    private async Task<string> OnRenderGame(R4Game game)
+    {
+        Console.WriteLine($"[OnRenderGame {game.GameId}] Attempting to get database file to load game content with");
+        var gameImageUrl = await Xml.FindGameByIdAsync("assets/dstdb.xml", game.GameId);
+        Console.WriteLine($"[OnRenderGame {game.GameId}] Got database file, attempting to find image");
+        if (gameImageUrl is null) return string.Empty;
+        var lang = (string)gameImageUrl.Element("locale")!.Attribute("lang")!;
+        Console.WriteLine($"[OnRenderGame {game.GameId}] Found image");
+        return $"https://art.gametdb.com/ds/coverM/{lang}/{game.GameId}.jpg";
+    }
+
+    private void CloseGameModal()
+    {
+        if (_modalGame != null)
+        {
+            Editor.Select(SelectionInfo.ForGame(_modalGame));
+        }
+        else
+        {
+            Editor.Deselect();
+        }
+
+        _isGameModalOpen = false;
+        _modalGame = null;
+    }
+
+    private void AddGame()
+    {
+        _isGameModalOpen = false;
+        _modalGame = null;
+        Editor.AddGame();
+    }
+
+
+    private void RemoveGame()
+    {
+        if (Editor.SelectionKind != SelectionKind.Game || Editor.SelectedGame == null)
+        {
+            return;
+        }
+
+        var removedGame = Editor.SelectedGame;
+        Editor.RemoveSelected();
+
+        if (_isGameModalOpen && ReferenceEquals(removedGame, _modalGame))
+        {
+            _isGameModalOpen = false;
+            _modalGame = null;
+        }
+    }
+
+
+    private string[] GetMasterCodes()
+    {
+        var game = Editor.SelectedGame ?? _modalGame;
+        if (game == null)
+        {
+            return [];
+        }
+
+        return Editor.GetMasterCodeText(game)
+            .Select(ToBigEndianHex)
+            .ToArray();
     }
 
     private void OnGameIdInput(ChangeEventArgs args)
@@ -158,13 +218,14 @@ else
 
     private void OnMasterCodeInput(int index, ChangeEventArgs args)
     {
-        if (Editor.SelectedGame == null)
+        var game = Editor.SelectedGame ?? _modalGame;
+        if (game == null)
         {
             return;
         }
 
         var input = args.Value?.ToString() ?? string.Empty;
-        Editor.UpdateMasterCode(Editor.SelectedGame, index, ToLittleEndianHex(input));
+        Editor.UpdateMasterCode(game, index, ToLittleEndianHex(input));
     }
 
     private void OnFolderTitleInput(ChangeEventArgs args)
@@ -232,7 +293,8 @@ else
 
     private async Task OnRomFileSelected(InputFileChangeEventArgs args)
     {
-        if (Editor.SelectedGame == null)
+        var game = Editor.SelectedGame ?? _modalGame;
+        if (game == null)
         {
             return;
         }

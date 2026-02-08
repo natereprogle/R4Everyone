@@ -3,11 +3,9 @@
     <div class="card-body panel-body">
         <div class="action-grid">
             <button class="btn btn-success" @onclick="OnAddGame">Add Game</button>
-            <button class="btn btn-success" @onclick="OnAddCheat" disabled="@(!CanAddCheat)">Add Cheat</button>
-            <button class="btn btn-success" @onclick="OnAddFolder" disabled="@(!CanAddFolder)">Add Folder</button>
-            <button class="btn btn-danger" @onclick="OnRemoveCheat" disabled="@(!CanRemoveCheat)">Remove Cheat</button>
-            <button class="btn btn-danger" @onclick="OnRemoveFolder" disabled="@(!CanRemoveFolder)">Remove Folder</button>
-            <button class="btn btn-danger" @onclick="OnRemoveGame" disabled="@(!CanRemoveGame)">Remove Game</button>
+            <button class="btn btn-danger" @onclick="OnRemoveGame" disabled="@(!CanRemoveGame)">Remove Last Edited
+                Game
+            </button>
         </div>
 
         @if (!IsValid)
@@ -27,18 +25,10 @@
 
 @code {
     [Parameter] public bool CanAddGame { get; set; }
-    [Parameter] public bool CanAddFolder { get; set; }
-    [Parameter] public bool CanAddCheat { get; set; }
     [Parameter] public bool CanRemoveGame { get; set; }
-    [Parameter] public bool CanRemoveFolder { get; set; }
-    [Parameter] public bool CanRemoveCheat { get; set; }
     [Parameter] public bool IsValid { get; set; }
     [Parameter] public IReadOnlyList<string> Errors { get; set; } = [];
 
     [Parameter] public EventCallback OnAddGame { get; set; }
-    [Parameter] public EventCallback OnAddFolder { get; set; }
-    [Parameter] public EventCallback OnAddCheat { get; set; }
     [Parameter] public EventCallback OnRemoveGame { get; set; }
-    [Parameter] public EventCallback OnRemoveFolder { get; set; }
-    [Parameter] public EventCallback OnRemoveCheat { get; set; }
 }

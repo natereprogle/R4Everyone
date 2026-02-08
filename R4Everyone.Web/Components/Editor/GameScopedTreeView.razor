@@ -1,0 +1,37 @@
+@inject EditorState Editor
+
+<div class="game-scoped-tree" @onclick="HandleBlankClick">
+    @if (Game == null || Game.Items.Count == 0)
+    {
+        <div class="text-muted small">No folders or cheats yet.</div>
+    }
+    else
+    {
+        @foreach (var item in Game.Items)
+        {
+            switch (item)
+            {
+                case R4Folder folder:
+                    <TreeNode Game="Game" Folder="folder" Level="0" />
+                    break;
+                case R4Cheat cheat:
+                    <TreeNode Game="Game" Cheat="cheat" Level="0" />
+                    break;
+            }
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public R4Game? Game { get; set; }
+
+    private void HandleBlankClick()
+    {
+        if (Game == null)
+        {
+            return;
+        }
+
+        Editor.Select(SelectionInfo.ForGame(Game));
+    }
+}

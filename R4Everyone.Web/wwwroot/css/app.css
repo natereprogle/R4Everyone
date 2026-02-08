@@ -86,7 +86,7 @@ body {
 }
 
 .controls-panel {
-    flex: 0 0 27%;
+    flex: 0 0 40%;
 }
 
 .tree-panel {
@@ -98,7 +98,7 @@ body {
 }
 
 .actions-panel {
-    flex: 0 0 30%;
+    flex: 1;
 }
 
 .treeview {
@@ -161,8 +161,8 @@ body {
 }
 
 .action-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 0.75rem;
 }
 
@@ -200,6 +200,138 @@ body {
 .empty-state {
     color: #6c757d;
     font-size: 0.95rem;
+}
+
+.game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, max-content));
+    gap: 1rem;
+    align-content: start;
+    justify-content: start;
+    height: 100%;
+    overflow: auto;
+    padding: 0.25rem;
+}
+
+.game-tile {
+    border: 1px solid var(--border-color);
+    background: var(--panel-bg);
+    border-radius: 0.85rem;
+    text-align: left;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    width: min-content;
+    align-self: start;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 18px rgba(31, 42, 48, 0.12);
+}
+
+.game-tile-image {
+    width: auto;
+    max-width: min(200px, 50vw);
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border-top-right-radius: 0.85rem;
+    border-top-left-radius: 0.85rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.game-tile-placeholder {
+    text-transform: uppercase;
+}
+
+.game-tile-body {
+    padding: 0.75rem 0.9rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.game-tile-title {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.game-tile-subtitle {
+    font-size: 0.8rem;
+    color: #7b756b;
+}
+
+.game-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(31, 42, 48, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1050;
+}
+
+.game-modal {
+    background: var(--app-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    width: min(1500px, 96vw);
+    height: min(760px, 92vh);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 50px rgba(31, 42, 48, 0.25);
+}
+
+.game-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top-right-radius: 1rem;
+    border-top-left-radius: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: #f9f7f2;
+}
+
+.game-modal-body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.modal-left,
+.modal-right {
+    min-height: 0;
+}
+
+.modal-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-right {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 1rem;
+}
+
+.game-scoped-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.95rem;
+}
+
+.modal-actions {
+    margin-bottom: 0.75rem;
 }
 
 .desktop-warning {

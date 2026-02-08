@@ -1,0 +1,89 @@
+<div class="game-grid">
+    @if (Games == null || Games.Count == 0)
+    {
+        <div class="empty-state">No games yet. Create or open a file to begin.</div>
+    }
+    else
+    {
+        @foreach (var game in Games)
+        {
+            var title = EditorState.GetGameDisplayTitle(game);
+            var imageUrl = GetImageUrl(game);
+            <button type="button" class="game-tile" @onclick="() => OnGameSelected.InvokeAsync(game)">
+                @if (!string.IsNullOrWhiteSpace(imageUrl))
+                {
+                    <img class="game-tile-image" src="@imageUrl" alt="@title"/>
+                }
+                else
+                {
+                    <img class="game-tile-image" src="assets/unknown_game_cover.webp" alt="Unknown cover art"/>
+                    @* <div class="game-tile-image game-tile-placeholder">@GetInitials(title)</div> *@
+                }
+                <div class="game-tile-body">
+                    <div class="game-tile-title">@title</div>
+                    @if (!string.IsNullOrWhiteSpace(game.GameId))
+                    {
+                        <div class="game-tile-subtitle">@game.GameId</div>
+                    }
+                </div>
+            </button>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<R4Game>? Games { get; set; }
+    [Parameter] public EventCallback<R4Game> OnGameSelected { get; set; }
+    [Parameter] public Func<R4Game, Task<string?>>? ImageUrlSelector { get; set; }
+    private readonly Dictionary<R4Game, (string GameId, Task<string?> Task)> _imageTasks = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Games == null || ImageUrlSelector == null)
+        {
+            _imageTasks.Clear();
+            return;
+        }
+
+        foreach (var game in Games)
+        {
+            var gameId = game.GameId;
+            if (_imageTasks.TryGetValue(game, out var entry) && entry.GameId == gameId)
+            {
+                continue;
+            }
+
+            _imageTasks[game] = (gameId, LoadImageAsync(game));
+        }
+
+        var currentGames = new HashSet<R4Game>(Games);
+        foreach (var game in _imageTasks.Keys.ToList().Where(game => !currentGames.Contains(game)))
+        {
+            _imageTasks.Remove(game);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task<string?> LoadImageAsync(R4Game game)
+    {
+        if (ImageUrlSelector == null)
+        {
+            return null;
+        }
+
+        var url = await ImageUrlSelector(game);
+        await InvokeAsync(StateHasChanged);
+        return url;
+    }
+
+    private string? GetImageUrl(R4Game game)
+    {
+        if (_imageTasks.TryGetValue(game, out var entry) && entry.Task.IsCompletedSuccessfully)
+        {
+            return entry.Task.Result;
+        }
+
+        return null;
+    }
+}
