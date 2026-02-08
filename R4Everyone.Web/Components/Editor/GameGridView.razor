@@ -9,6 +9,7 @@
         {
             var title = EditorState.GetGameDisplayTitle(game);
             var imageUrl = GetImageUrl(game);
+            var isLoading = IsLoading(game);
             <button type="button" class="game-tile" @onclick="() => OnGameSelected.InvokeAsync(game)">
                 @if (!string.IsNullOrWhiteSpace(imageUrl))
                 {
@@ -16,8 +17,14 @@
                 }
                 else
                 {
-                    <img class="game-tile-image" src="assets/unknown_game_cover.webp" alt="Unknown cover art"/>
-                    @* <div class="game-tile-image game-tile-placeholder">@GetInitials(title)</div> *@
+                    <div class="game-image-frame">
+                        <img class="game-tile-image @(isLoading ? "loading" : "")" src="assets/unknown_game_cover.webp"
+                             alt="Unknown cover art"/>
+                        @if (isLoading)
+                        {
+                            <div class="game-image-loading-bar"></div>
+                        }
+                    </div>
                 }
                 <div class="game-tile-body">
                     <div class="game-tile-title">@title</div>
@@ -35,7 +42,7 @@
     [Parameter] public IReadOnlyList<R4Game>? Games { get; set; }
     [Parameter] public EventCallback<R4Game> OnGameSelected { get; set; }
     [Parameter] public Func<R4Game, Task<string?>>? ImageUrlSelector { get; set; }
-    private readonly Dictionary<R4Game, (string GameId, Task<string?> Task)> _imageTasks = new();
+    private readonly Dictionary<R4Game, (string GameId, Task<string?> Task, DateTime StartedAt)> _imageTasks = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -49,29 +56,23 @@
         {
             var gameId = game.GameId;
             if (_imageTasks.TryGetValue(game, out var entry) && entry.GameId == gameId)
-            {
                 continue;
-            }
 
-            _imageTasks[game] = (gameId, LoadImageAsync(game));
+            _imageTasks[game] = (gameId, LoadImageAsync(game), DateTime.UtcNow);
         }
 
         var currentGames = new HashSet<R4Game>(Games);
         foreach (var game in _imageTasks.Keys.ToList().Where(game => !currentGames.Contains(game)))
-        {
             _imageTasks.Remove(game);
-        }
 
         await Task.CompletedTask;
     }
 
     private async Task<string?> LoadImageAsync(R4Game game)
     {
-        if (ImageUrlSelector == null)
-        {
-            return null;
-        }
+        if (ImageUrlSelector == null) return null;
 
+        _ = Task.Delay(TimeSpan.FromSeconds(10)).ContinueWith(_ => InvokeAsync(StateHasChanged));
         var url = await ImageUrlSelector(game);
         await InvokeAsync(StateHasChanged);
         return url;
@@ -80,10 +81,17 @@
     private string? GetImageUrl(R4Game game)
     {
         if (_imageTasks.TryGetValue(game, out var entry) && entry.Task.IsCompletedSuccessfully)
-        {
             return entry.Task.Result;
-        }
 
         return null;
     }
+
+    private bool IsLoading(R4Game game)
+    {
+        if (!_imageTasks.TryGetValue(game, out var entry) || entry.Task.IsCompleted)
+            return false;
+
+        return DateTime.UtcNow - entry.StartedAt < TimeSpan.FromSeconds(10);
+    }
+
 }

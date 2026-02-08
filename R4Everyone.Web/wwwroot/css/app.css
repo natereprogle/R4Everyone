@@ -244,6 +244,35 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
+.game-image-frame {
+    position: relative;
+    width: max-content;
+    margin: 0 auto;
+}
+
+.game-tile-image.loading {
+    filter: blur(6px);
+}
+
+.game-image-loading-bar {
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    bottom: 10px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(31, 42, 48, 0.15);
+    overflow: hidden;
+}
+
+.game-image-loading-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(31, 42, 48, 0.6), transparent);
+    animation: game-load 1.2s ease-in-out infinite;
+}
+
 .game-tile-placeholder {
     text-transform: uppercase;
 }
@@ -373,6 +402,15 @@ body {
     to {
         opacity: 0;
         transform: translateY(-8px);
+    }
+}
+
+@keyframes game-load {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(100%);
     }
 }
 
