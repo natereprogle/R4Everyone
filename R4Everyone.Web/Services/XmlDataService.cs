@@ -8,6 +8,11 @@ public class XmlDataService(HttpClient http)
 {
     private readonly ConcurrentDictionary<string, Lazy<Task<XDocument>>> _cache = new();
 
+    public Task PreloadAsync(string relativeUrl)
+    {
+        return GetDocumentAsync(relativeUrl);
+    }
+
     public async Task<XElement?> FindGameByIdAsync(
         string relativeUrl,
         string targetId,

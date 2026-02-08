@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using R4Everyone.Web;
 using R4Everyone.Web.Services;
 using R4Everyone.Web.State;
@@ -14,5 +15,7 @@ builder.Services.AddScoped<EditorState>();
 builder.Services.AddScoped<ViewportService>();
 builder.Services.AddScoped<ToastService>();
 
-
-await builder.Build().RunAsync();
+var host = builder.Build();
+var xmlDataService = host.Services.GetRequiredService<XmlDataService>();
+await xmlDataService.PreloadAsync("assets/dstdb.xml");
+await host.RunAsync();

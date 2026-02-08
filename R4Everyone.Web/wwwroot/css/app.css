@@ -21,6 +21,39 @@ body {
     overflow: hidden;
 }
 
+.app-loading {
+    height: 100%;
+    display: grid;
+    place-content: center;
+    gap: 1rem;
+    text-align: center;
+    padding: 2rem;
+}
+
+.loading-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+}
+
+.loading-bar {
+    width: min(360px, 70vw);
+    height: 10px;
+    border-radius: 999px;
+    background: #e2ddd2;
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-bar-fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(31, 42, 48, 0.7), transparent);
+    transform: translateX(-100%);
+    animation: loading-bar 1.3s ease-in-out infinite;
+}
+
 .app-root {
     height: 100%;
 }
@@ -406,6 +439,15 @@ body {
 }
 
 @keyframes game-load {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes loading-bar {
     from {
         transform: translateX(-100%);
     }
