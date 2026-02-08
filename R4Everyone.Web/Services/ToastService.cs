@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace R4Everyone.Web.Services;
 
 public enum ToastState
@@ -12,6 +14,7 @@ public sealed class ToastMessage
     public Guid Id { get; init; } = Guid.NewGuid();
     public string Message { get; init; } = string.Empty;
     public ToastState State { get; init; }
+    public bool IsClosing { get; set; }
 }
 
 public sealed class ToastService
@@ -42,17 +45,21 @@ public sealed class ToastService
 
     public void Dismiss(Guid id)
     {
+        var toast = _toasts.FirstOrDefault(item => item.Id == id);
+        if (toast == null || toast.IsClosing)
+        {
+            return;
+        }
+
+        toast.IsClosing = true;
         if (_dismissTokens.Remove(id, out var token))
         {
             token.Cancel();
             token.Dispose();
         }
 
-        var removed = _toasts.RemoveAll(toast => toast.Id == id) > 0;
-        if (removed)
-        {
-            NotifyChanged();
-        }
+        NotifyChanged();
+        _ = RemoveAfterDelayAsync(id);
     }
 
     private void AddToast(ToastMessage toast)
@@ -60,7 +67,7 @@ public sealed class ToastService
         if (_toasts.Count >= 3)
         {
             var oldest = _toasts[0];
-            Dismiss(oldest.Id);
+            RemoveImmediately(oldest.Id);
         }
 
         _toasts.Add(toast);
@@ -88,6 +95,32 @@ public sealed class ToastService
         }
 
         Dismiss(id);
+    }
+
+    private async Task RemoveAfterDelayAsync(Guid id)
+    {
+        await Task.Delay(TimeSpan.FromMilliseconds(250));
+
+        var removed = _toasts.RemoveAll(toast => toast.Id == id) > 0;
+        if (removed)
+        {
+            NotifyChanged();
+        }
+    }
+
+    private void RemoveImmediately(Guid id)
+    {
+        if (_dismissTokens.Remove(id, out var token))
+        {
+            token.Cancel();
+            token.Dispose();
+        }
+
+        var removed = _toasts.RemoveAll(toast => toast.Id == id) > 0;
+        if (removed)
+        {
+            NotifyChanged();
+        }
     }
 
     private void NotifyChanged()

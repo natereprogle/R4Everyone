@@ -27,7 +27,7 @@ else
         <div class="app-body container-fluid">
             <div class="row h-100 g-3">
                 <div class="col-lg-3 h-100 d-flex flex-column gap-3">
-                    <FileControlsPanel CanSave="CanSave" OnNew="Editor.NewFile" OnOpen="OnOpenFileSelected"
+                    <FileControlsPanel CanSave="CanSave" OnNew="OnNewFile" OnOpen="OnOpenFileSelected"
                                        OnSave="SaveAsync"/>
 
                     <TreePanel Database="Editor.Database" Selected="SelectedItem"/>
@@ -181,7 +181,7 @@ else
     {
         Editor.UpdateFolderOneHot(args.Value is true);
         if (args.Value is true)
-            Toasts.ShowInfo("Because 'One Hot' has been enabled, all cheats except the first 'Enabled' cheat (if any) have been disabled. Only one cheat can be enabled in a 'One Hot' folder at a time.");
+            Toasts.ShowWarning("'One Hot' only allows one cheat in a folder to be enabled at a time, and so all cheats except the first 'Enabled' one (if any) have been disabled. If this was unintended, disable One Hot and re-enable your cheats.");
     }
 
     private void OnCheatTitleInput(ChangeEventArgs args)
@@ -257,13 +257,21 @@ else
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms);
         ms.Position = 0;
+        Toasts.ShowInfo("Opening file...");
         await Editor.LoadAsync(ms, file.Name);
+    }
+
+    private void OnNewFile()
+    {
+        Editor.NewFile();
+        Toasts.ShowInfo("New file created. Ready to edit!");
     }
 
     private async Task SaveAsync()
     {
         if (!CanSave)
         {
+            Toasts.ShowError("Please review any errors before saving");
             return;
         }
 
@@ -273,6 +281,7 @@ else
             return;
         }
 
+        Toasts.ShowInfo("Beginning download...");
         var fileName = string.IsNullOrWhiteSpace(Editor.LoadedFileName) ? "cheats.dat" : Editor.LoadedFileName;
         await Js.InvokeVoidAsync("downloadFile", fileName, "application/octet-stream", bytes);
         Editor.MarkSaved();

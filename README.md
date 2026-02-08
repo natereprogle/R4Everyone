@@ -19,13 +19,14 @@ were designed to edit usrcheat.dat R4 files.
    says an error occurred and to reload. However, the app will still function. 
 
 ## Planned Features
-1. Better cheat code editor (Copy/paste support)
-2. Support for adding triggers
-3. Sorting/moving items
-4. Dark mode
-5. Import/export XML
-6. Mobile support (Fully reactive layout)
-7. Confirmation before deleting games or folders that have content or cheats that have been modified from "default"
+1. Undo/redo support
+2. Better cheat code editor (Copy/paste support)
+3. Support for adding triggers
+4. Sorting/moving items
+5. Dark mode
+6. Import/export XML
+7. Mobile support (Fully reactive layout)
+8. Confirmation before deleting games or folders that have content or cheats that have been modified from "default"
 
 # Why R4Everyone when r4cce works just fine?
 

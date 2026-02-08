@@ -15,7 +15,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0c3ad0f3-c288-4ed3-a6e2-d67ca6fa3807" name="Changes" comment="" />
+    <list default="true" id="0c3ad0f3-c288-4ed3-a6e2-d67ca6fa3807" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/Logo.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/AppHeaderBar.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/AppHeaderBar.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/ToastHost.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/ToastHost.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Pages/Home.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Pages/Home.razor" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Services/ToastService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Services/ToastService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/css/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/css/app.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/favicon.png" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/favicon.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-192.png" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-192.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-512.png" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-512.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -79,9 +91,11 @@
     <setting file="file://$PROJECT_DIR$/R4Everyone.Binary4Everyone/R4CheatDat.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/R4Everyone.Binary4Everyone/R4Codecs.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/R4Everyone.Binary4Everyone/R4Models.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/R4Everyone.Web/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.css.map" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/R4Everyone.Web/wwwroot/lib/bootstrap/dist/css/bootstrap-reboot.rtl.min.css.map" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/R4Everyone.Web/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.css.map" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/R4Everyone.Web/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.min.css.map" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/R4Everyone.Web/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.rtl.css.map" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/R4Everyone.Web/wwwroot/lib/bootstrap/dist/css/bootstrap-utilities.rtl.min.css.map" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/R4Everyone.Web/wwwroot/lib/bootstrap/dist/css/bootstrap.min.css.map" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/R4Everyone.Web/wwwroot/lib/bootstrap/dist/css/bootstrap.rtl.css.map" root0="FORCE_HIGHLIGHTING" />
@@ -200,7 +214,7 @@
       <workItem from="1769903483967" duration="24533000" />
       <workItem from="1769964982044" duration="20896000" />
       <workItem from="1770490746939" duration="119000" />
-      <workItem from="1770490915979" duration="17189000" />
+      <workItem from="1770490915979" duration="17990000" />
     </task>
     <task id="LOCAL-00001" summary="Rewrite GUI into TUI. Most features implemented, need to add saving, saving as, all the controls (Add game, cheat, folder; Remove game, cheat, folder), and actually get the cheat code editor itself working. That part is frustrating me a LOT.">
       <option name="closed" value="true" />
@@ -274,7 +288,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770523390990</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Update workspace file">
+      <option name="closed" value="true" />
+      <created>1770523415181</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1770523415181</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -291,7 +313,8 @@
     <MESSAGE value="Fix build" />
     <MESSAGE value="Add PWA support, update README, fix One Hot not disabling all but one cheat in a folder." />
     <MESSAGE value="Implement a Toast Service" />
-    <option name="LAST_COMMIT_MESSAGE" value="Implement a Toast Service" />
+    <MESSAGE value="Update workspace file" />
+    <option name="LAST_COMMIT_MESSAGE" value="Update workspace file" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
