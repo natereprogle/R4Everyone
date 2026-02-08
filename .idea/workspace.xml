@@ -15,11 +15,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0c3ad0f3-c288-4ed3-a6e2-d67ca6fa3807" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/Services/ToastService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Layout/MainLayout.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Layout/MainLayout.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Program.cs" afterDir="false" />
-    </list>
+    <list default="true" id="0c3ad0f3-c288-4ed3-a6e2-d67ca6fa3807" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -204,7 +200,7 @@
       <workItem from="1769903483967" duration="24533000" />
       <workItem from="1769964982044" duration="20896000" />
       <workItem from="1770490746939" duration="119000" />
-      <workItem from="1770490915979" duration="16888000" />
+      <workItem from="1770490915979" duration="17189000" />
     </task>
     <task id="LOCAL-00001" summary="Rewrite GUI into TUI. Most features implemented, need to add saving, saving as, all the controls (Add game, cheat, folder; Remove game, cheat, folder), and actually get the cheat code editor itself working. That part is frustrating me a LOT.">
       <option name="closed" value="true" />
@@ -270,7 +266,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770522970898</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Implement a Toast Service">
+      <option name="closed" value="true" />
+      <created>1770523390990</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1770523390990</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -286,7 +290,8 @@
     <MESSAGE value="Break apart EditorState and Home.razor files into separate components." />
     <MESSAGE value="Fix build" />
     <MESSAGE value="Add PWA support, update README, fix One Hot not disabling all but one cheat in a folder." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add PWA support, update README, fix One Hot not disabling all but one cheat in a folder." />
+    <MESSAGE value="Implement a Toast Service" />
+    <option name="LAST_COMMIT_MESSAGE" value="Implement a Toast Service" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
