@@ -49,6 +49,7 @@ public sealed class R4Database : IAsyncDisposable
         if (header.Length < HeaderSize)
             throw new FileLoadException("File size is smaller than the minimum required size for an R4 cheat database");
         Log.Verbose("File is at least 100 bytes long, checking magic string");
+        Console.WriteLine("File is at least 100 bytes long, checking magic string");
 
         // Validate that the first 12 bytes are the magic string, which is required for an R4 cheat database
         var magicString = Encoding.ASCII.GetString(header, 0, 12);

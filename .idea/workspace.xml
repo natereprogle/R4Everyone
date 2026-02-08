@@ -16,16 +16,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0c3ad0f3-c288-4ed3-a6e2-d67ca6fa3807" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/Logo.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/AppHeaderBar.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/Editor/AppHeaderBar.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Components/ToastHost.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Components/ToastHost.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Pages/Home.razor" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Pages/Home.razor" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/Services/ToastService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/Services/ToastService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/css/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/css/app.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/favicon.png" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/favicon.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-192.png" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-192.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-512.png" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Web/wwwroot/icon-512.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Binary4Everyone/CRC32Helper.cs" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Binary4Everyone/CRC32Helper.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/R4Everyone.Binary4Everyone/R4Database.cs" beforeDir="false" afterPath="$PROJECT_DIR$/R4Everyone.Binary4Everyone/R4Database.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -121,31 +114,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;.NET Launch Settings Profile.R4Everyone.Web: http.executor&quot;: &quot;Run&quot;,
-    &quot;.NET Project.R4Everyone.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;UWP.R4Everyone.executor&quot;: &quot;Run&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.ide.settings.web.browsers&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    ".NET Launch Settings Profile.R4Everyone.Web: http.executor": "Run",
+    ".NET Project.R4Everyone.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "UWP.R4Everyone.executor": "Run",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "reference.settings.ide.settings.web.browsers",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected=".NET Launch Settings Profile.R4Everyone.Web: http">
     <configuration name="R4Everyone" type="DotNetProject" factoryName=".NET Project">
       <option name="EXE_PATH" value="$PROJECT_DIR$/R4Everyone/bin/Debug/net10.0/R4Everyone.exe" />
@@ -214,7 +207,7 @@
       <workItem from="1769903483967" duration="24533000" />
       <workItem from="1769964982044" duration="20896000" />
       <workItem from="1770490746939" duration="119000" />
-      <workItem from="1770490915979" duration="17990000" />
+      <workItem from="1770490915979" duration="19318000" />
     </task>
     <task id="LOCAL-00001" summary="Rewrite GUI into TUI. Most features implemented, need to add saving, saving as, all the controls (Add game, cheat, folder; Remove game, cheat, folder), and actually get the cheat code editor itself working. That part is frustrating me a LOT.">
       <option name="closed" value="true" />
@@ -296,7 +289,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770523415181</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="Animate toasts in, update logos and images">
+      <option name="closed" value="true" />
+      <created>1770524373914</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1770524373914</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -314,7 +315,8 @@
     <MESSAGE value="Add PWA support, update README, fix One Hot not disabling all but one cheat in a folder." />
     <MESSAGE value="Implement a Toast Service" />
     <MESSAGE value="Update workspace file" />
-    <option name="LAST_COMMIT_MESSAGE" value="Update workspace file" />
+    <MESSAGE value="Animate toasts in, update logos and images" />
+    <option name="LAST_COMMIT_MESSAGE" value="Animate toasts in, update logos and images" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

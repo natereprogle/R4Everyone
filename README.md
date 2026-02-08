@@ -8,7 +8,8 @@ were designed to edit usrcheat.dat R4 files.
 ## Features
 
 1. WebAssembly, meaning near-native speeds. In the browser. Yeah.
-2. Installable as a PWA, supporting offline use.
+2. Installable as a PWA, supporting offline use. The installed app is 304 Kb, compared to r4cce's 1.45 MiB (\*Size on
+   disk).
 3. Client-side only, no data leaves your device.
 
 ## Limitations
@@ -16,9 +17,11 @@ were designed to edit usrcheat.dat R4 files.
 1. Not all r4cce features have been implemented (See below).
 2. Not yet fully reactive, meaning it requires a display of at least 992x530 pixels to work.
 3. It does not work on iPhone due to screen size, but it _does_ work on iPad. However, an error appears on the app that
-   says an error occurred and to reload. However, the app will still function. 
+   says an error occurred and to reload. However, the app will still function.
+4. Does not work on larger files. WASM has memory limitations, and editing large files will cause WASM to OOM.
 
 ## Planned Features
+
 1. Undo/redo support
 2. Better cheat code editor (Copy/paste support)
 3. Support for adding triggers
@@ -30,11 +33,11 @@ were designed to edit usrcheat.dat R4 files.
 
 # Why R4Everyone when r4cce works just fine?
 
-r4cce works just fine for Windows users only. But, with the prevalence of mobile emulators (Delta), handheld gaming PCs
+R4cce works just fine for Windows users only. But with the prevalence of mobile emulators (Delta), handheld gaming PCs
 (Steam Deck), and other non-Windows devices, plus the fact that r4cce isn't available anymore through official channels,
 an alternative was necessary.
 
-r4cce was last updated nearly two decades ago (2009) and, from what I can tell, is no longer maintained. r4cce was
+R4cce was last updated nearly two decades ago (2009) and, from what I can tell, is no longer maintained. R4cce was
 hosted on the author's website and, as of today, 2026-02-07, that site is down. DNS seems to resolve, but the site
 times out. I cannot find any copies of the software online, either (which wouldn't have been allowed anyway due to the
 licensing). They all go to dead .co.jp domains. Archive.org does have the website archived, and that's the only place I

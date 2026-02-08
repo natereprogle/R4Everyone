@@ -1,5 +1,4 @@
 ﻿using System.IO.Hashing;
-using Serilog;
 
 namespace R4Everyone.Binary4Everyone;
 
@@ -21,7 +20,7 @@ public static class Crc32Helper
 
         // Return the checksum as a hexadecimal string, inverted (R4 format)
         var invertedChecksum = BitConverter.ToUInt32(checksum, 0) ^ 0xffffffff;
-        Log.Information("Checksum is " + invertedChecksum.ToString("x8"));
+        Console.WriteLine("Checksum is " + invertedChecksum.ToString("x8"));
         return invertedChecksum;
     }
 
