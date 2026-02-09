@@ -1,7 +1,7 @@
 <div class="row g-3">
     <div class="col-12">
         <label class="form-label">Title</label>
-        <input class="form-control" value="@Cheat.Title" @oninput="OnCheatTitleInput" />
+        <input class="form-control" value="@Cheat.Title" @oninput="OnCheatTitleInput"/>
     </div>
     <div class="col-12">
         <label class="form-label">Description</label>
@@ -9,42 +9,320 @@
     </div>
     <div class="col-12">
         <div class="form-check">
-            <input class="form-check-input" type="checkbox" checked="@Cheat.Enabled" @onchange="OnCheatEnabledChanged" />
+            <input class="form-check-input" type="checkbox" checked="@Cheat.Enabled" @onchange="OnCheatEnabledChanged"/>
             <label class="form-check-label">Enabled</label>
         </div>
     </div>
 </div>
 
-<hr />
+<hr/>
+
+@using System.Text
+@inject IJSRuntime Js
 
 <div class="codes-editor">
-    <div class="d-flex align-items-center justify-content-between mb-2">
-        <div class="section-title">Codes</div>
-        <button class="btn btn-sm btn-outline-primary" @onclick="OnAddCheatRow">Add Row</button>
-    </div>
-    @for (var rowIndex = 0; rowIndex < CodeRows.Count / 2; rowIndex++)
+    <div class="section-title mb-2">Codes</div>
+    <textarea class="form-control code-input @(HasRowErrors ? "is-invalid" : string.Empty)" rows="6"
+              value="@_localCheatCodeText" @oninput="HandleCheatCodeInput" spellcheck="false"
+              @ref="_cheatCodeInput"></textarea>
+    @if (HasRowErrors)
     {
-        var leftIndex = rowIndex * 2;
-        var rightIndex = leftIndex + 1;
-        <div class="code-row">
-            <input class="form-control code-input" value="@CodeRows[leftIndex]" @oninput="(e) => OnCheatBlockInput?.Invoke(leftIndex, e)" />
-            <input class="form-control code-input" value="@CodeRows[rightIndex]" @oninput="(e) => OnCheatBlockInput?.Invoke(rightIndex, e)" />
-
-            @{
-                var index = rowIndex;
+        <div class="invalid-feedback d-block">
+            @foreach (var message in _rowValidationMessages)
+            {
+                <div>@message</div>
             }
-            <button class="btn btn-sm btn-outline-danger" @onclick="() => OnRemoveCheatRow?.Invoke(index)">Remove</button>
         </div>
     }
 </div>
 
 @code {
+    private ElementReference _cheatCodeInput;
+    private readonly List<string> _rowValidationMessages = [];
+    private string _localCheatCodeText = string.Empty;
+    private bool _pendingSelection;
+    private int _pendingSelectionStart;
+    private int _pendingSelectionEnd;
+    private R4Cheat? _lastCheat;
+
     [Parameter] public R4Cheat Cheat { get; set; } = null!;
-    [Parameter] public List<string> CodeRows { get; set; } = [];
+    [Parameter] public string CheatCodeText { get; set; } = string.Empty;
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatTitleInput { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
-    [Parameter] public Action<int, ChangeEventArgs>? OnCheatBlockInput { get; set; }
-    [Parameter] public EventCallback OnAddCheatRow { get; set; }
-    [Parameter] public Action<int>? OnRemoveCheatRow { get; set; }
+    [Parameter] public EventCallback<string> OnCheatCodeInput { get; set; }
+
+    private bool HasRowErrors => _rowValidationMessages.Count > 0;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_lastCheat, Cheat))
+        {
+            _lastCheat = Cheat;
+            _localCheatCodeText = CheatCodeText;
+            UpdateRowValidation(_localCheatCodeText);
+        }
+        else if (!_pendingSelection && !string.Equals(_localCheatCodeText, CheatCodeText, StringComparison.Ordinal))
+        {
+            _localCheatCodeText = CheatCodeText;
+            UpdateRowValidation(_localCheatCodeText);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingSelection)
+        {
+            _pendingSelection = false;
+            await Js.InvokeVoidAsync("r4eCheatEditor.setSelection", _cheatCodeInput, _pendingSelectionStart,
+                _pendingSelectionEnd);
+        }
+
+        if (firstRender)
+        {
+            await Js.InvokeVoidAsync("r4eCheatEditor.bindHexFilter", _cheatCodeInput);
+        }
+    }
+
+    private async Task HandleCheatCodeInput(ChangeEventArgs args)
+    {
+        var raw = args.Value?.ToString() ?? string.Empty;
+        var state = await Js.InvokeAsync<CheatEditorSelection>("r4eCheatEditor.getState", _cheatCodeInput);
+        var caretStart = state.Start;
+        var caretEnd = state.End;
+        raw = NormalizeLineEndings(raw, ref caretStart, ref caretEnd);
+
+        var formatted = FormatCheatText(raw, caretStart, caretEnd, out var newStart, out var newEnd);
+        _localCheatCodeText = formatted;
+        _pendingSelection = true;
+        _pendingSelectionStart = newStart;
+        _pendingSelectionEnd = newEnd;
+        UpdateRowValidation(formatted);
+
+        await OnCheatCodeInput.InvokeAsync(formatted);
+    }
+
+    private static string NormalizeLineEndings(string input, ref int caretStart, ref int caretEnd)
+    {
+        if (!input.Contains('\r'))
+        {
+            return input;
+        }
+
+        var builder = new StringBuilder(input.Length);
+        var start = caretStart;
+        var end = caretEnd;
+
+        for (var i = 0; i < input.Length; i++)
+        {
+            var ch = input[i];
+            if (ch == '\r')
+            {
+                if (i < start) start--;
+                if (i < end) end--;
+                continue;
+            }
+
+            builder.Append(ch);
+        }
+
+        caretStart = Math.Max(0, start);
+        caretEnd = Math.Max(0, end);
+        return builder.ToString();
+    }
+
+    private static string FormatCheatText(string input, int caretStart, int caretEnd, out int newStart, out int newEnd)
+    {
+        if (!string.IsNullOrEmpty(input))
+            return input.Contains('\n')
+                ? FormatLineBased(input, caretStart, caretEnd, out newStart, out newEnd)
+                : FormatGlobal(input, caretStart, caretEnd, out newStart, out newEnd);
+        newStart = 0;
+        newEnd = 0;
+        return string.Empty;
+    }
+
+    private static string FormatLineBased(string input, int caretStart, int caretEnd, out int newStart, out int newEnd)
+    {
+        var lines = input.Split('\n');
+        var builder = new StringBuilder();
+        var inputOffset = 0;
+        newStart = 0;
+        newEnd = 0;
+        var startSet = false;
+        var endSet = false;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var lineStart = inputOffset;
+            var lineEnd = lineStart + line.Length;
+            var formattedLine = FormatLine(line);
+
+            if (!startSet && caretStart >= lineStart && caretStart <= lineEnd)
+            {
+                var caretInLine = Math.Clamp(caretStart - lineStart, 0, line.Length);
+                var hexBefore = CountHex(line, caretInLine);
+                newStart = builder.Length + GetFormattedPositionForHexCount(formattedLine, hexBefore);
+                startSet = true;
+            }
+
+            if (!endSet && caretEnd >= lineStart && caretEnd <= lineEnd)
+            {
+                var caretInLine = Math.Clamp(caretEnd - lineStart, 0, line.Length);
+                var hexBefore = CountHex(line, caretInLine);
+                newEnd = builder.Length + GetFormattedPositionForHexCount(formattedLine, hexBefore);
+                endSet = true;
+            }
+
+            builder.Append(formattedLine);
+            if (i < lines.Length - 1)
+            {
+                builder.Append('\n');
+            }
+
+            inputOffset += line.Length + 1;
+        }
+
+        if (!startSet) newStart = builder.Length;
+        if (!endSet) newEnd = builder.Length;
+        return builder.ToString();
+    }
+
+    private static string FormatGlobal(string input, int caretStart, int caretEnd, out int newStart, out int newEnd)
+    {
+        var hexChars = input.Where(IsHexChar).Select(char.ToUpperInvariant).ToArray();
+        if (hexChars.Length == 0)
+        {
+            newStart = 0;
+            newEnd = 0;
+            return string.Empty;
+        }
+
+        var chunks = SplitIntoChunks(hexChars);
+        var formatted = FormatChunks(chunks);
+        var hexBeforeStart = CountHex(input, Math.Clamp(caretStart, 0, input.Length));
+        var hexBeforeEnd = CountHex(input, Math.Clamp(caretEnd, 0, input.Length));
+        newStart = GetFormattedPositionForHexCount(formatted, hexBeforeStart);
+        newEnd = GetFormattedPositionForHexCount(formatted, hexBeforeEnd);
+        return formatted;
+    }
+
+    private static string FormatLine(string line)
+    {
+        var hexChars = line.Where(IsHexChar).Select(char.ToUpperInvariant).ToArray();
+        if (hexChars.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var chunks = SplitIntoChunks(hexChars);
+        return FormatChunks(chunks);
+    }
+
+    private static List<string> SplitIntoChunks(char[] hexChars)
+    {
+        var chunks = new List<string>();
+        for (var i = 0; i < hexChars.Length; i += 8)
+        {
+            var length = Math.Min(8, hexChars.Length - i);
+            chunks.Add(new string(hexChars, i, length));
+        }
+
+        return chunks;
+    }
+
+    private static string FormatChunks(List<string> chunks)
+    {
+        if (chunks.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var rows = new List<string>();
+        for (var i = 0; i < chunks.Count; i += 2)
+        {
+            var first = chunks[i];
+            var second = i + 1 < chunks.Count ? chunks[i + 1] : string.Empty;
+            rows.Add(string.IsNullOrEmpty(second) ? first : $"{first} {second}");
+        }
+
+        return string.Join('\n', rows);
+    }
+
+    private static int CountHex(string input, int length)
+    {
+        var count = 0;
+        for (var i = 0; i < length && i < input.Length; i++)
+        {
+            if (IsHexChar(input[i]))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static int GetFormattedPositionForHexCount(string formatted, int hexCount)
+    {
+        if (hexCount <= 0)
+        {
+            return 0;
+        }
+
+        var count = 0;
+        for (var i = 0; i < formatted.Length; i++)
+        {
+            if (!IsHexChar(formatted[i]))
+            {
+                continue;
+            }
+
+            count++;
+            if (count == hexCount)
+            {
+                return i + 1;
+            }
+        }
+
+        return formatted.Length;
+    }
+
+    private void UpdateRowValidation(string text)
+    {
+        _rowValidationMessages.Clear();
+        var lines = text.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            var chunks = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (chunks.Length != 2 || !IsValidChunk(chunks[0]) || !IsValidChunk(chunks[1]))
+            {
+                _rowValidationMessages.Add($"Row {i + 1} must contain 2 blocks of 8 hex characters.");
+            }
+        }
+    }
+
+    private static bool IsValidChunk(string chunk)
+    {
+        return chunk.Length == 8 && chunk.All(IsHexChar);
+    }
+
+    private static bool IsHexChar(char ch)
+    {
+        return ch is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
+    }
+
+    private sealed class CheatEditorSelection
+    {
+        public int Start { get; init; }
+        public int End { get; init; }
+    }
+
 }

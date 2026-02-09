@@ -50,7 +50,7 @@ else
         <GameEditorModal IsOpen="IsGameModalOpen"
                          Game="_modalGame"
                          MasterCodes="MasterCodes"
-                         CheatCodeRows="CheatCodeRows"
+                         CheatCodeText="@CheatCodeText"
                          OnClose="@CloseGameModal"
                          OnGameIdInput="OnGameIdInput"
                          OnGameTitleInput="OnGameTitleInput"
@@ -64,9 +64,7 @@ else
                          OnCheatTitleInput="OnCheatTitleInput"
                          OnCheatDescriptionInput="OnCheatDescriptionInput"
                          OnCheatEnabledChanged="OnCheatEnabledChanged"
-                         OnCheatBlockInput="OnCheatBlockInput"
-                         OnAddCheatRow="AddCheatRow"
-                         OnRemoveCheatRow="RemoveCheatRow"/>
+                         OnCheatCodeInput="OnCheatCodeInput"/>
     </div>
 }
 
@@ -82,11 +80,9 @@ else
 
     private string[] MasterCodes => GetMasterCodes();
 
-    private List<string> CheatCodeRows => Editor.SelectedCheat == null
-        ? []
-        : Editor.GetCheatCodeBlocks(Editor.SelectedCheat)
-            .Select(ToBigEndianHex)
-            .ToList();
+    private string CheatCodeText => Editor.SelectedCheat == null
+        ? string.Empty
+        : FormatCheatBlocks(Editor.GetCheatCodeBlocks(Editor.SelectedCheat).Select(ToBigEndianHex));
 
     protected override void OnInitialized()
     {
@@ -288,7 +284,8 @@ else
         }
 
         var input = args.Value?.ToString() ?? string.Empty;
-        Editor.UpdateMasterCode(game, index, ToLittleEndianHex(input));
+        var sanitized = SanitizeHexInput(input, 8);
+        Editor.UpdateMasterCode(game, index, ToLittleEndianHex(sanitized));
     }
 
     private void OnFolderTitleInput(ChangeEventArgs args)
@@ -323,35 +320,17 @@ else
         Editor.UpdateCheatEnabled(args.Value is true);
     }
 
-    private void OnCheatBlockInput(int index, ChangeEventArgs args)
+    private void OnCheatCodeInput(string value)
     {
         if (Editor.SelectedCheat == null)
         {
             return;
         }
 
-        var input = args.Value?.ToString() ?? string.Empty;
-        Editor.UpdateCheatBlock(Editor.SelectedCheat, index, ToLittleEndianHex(input));
-    }
-
-    private void AddCheatRow()
-    {
-        if (Editor.SelectedCheat == null)
-        {
-            return;
-        }
-
-        Editor.AddCheatRow(Editor.SelectedCheat);
-    }
-
-    private void RemoveCheatRow(int rowIndex)
-    {
-        if (Editor.SelectedCheat == null)
-        {
-            return;
-        }
-
-        Editor.RemoveCheatRow(Editor.SelectedCheat, rowIndex);
+        var blocks = ParseCheatRows(value)
+            .Select(ToLittleEndianHex)
+            .ToList();
+        Editor.UpdateCheatBlocks(Editor.SelectedCheat, blocks);
     }
 
     private async Task OnRomFileSelected(InputFileChangeEventArgs args)
@@ -440,6 +419,142 @@ else
             value.AsSpan(4, 2),
             value.AsSpan(2, 2),
             value.AsSpan(0, 2));
+    }
+
+    private static string SanitizeHexInput(string input, int maxLength)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return string.Empty;
+        }
+
+        var buffer = new List<char>(Math.Min(input.Length, maxLength));
+        foreach (var ch in input)
+        {
+            if (!IsHexChar(ch))
+            {
+                continue;
+            }
+
+            buffer.Add(char.ToUpperInvariant(ch));
+            if (buffer.Count == maxLength)
+            {
+                break;
+            }
+        }
+
+        return new string(buffer.ToArray());
+    }
+
+    private static List<string> ParseCheatRows(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return [];
+        }
+
+        var normalized = input.Replace("\r\n", "\n").Replace("\r", "\n");
+        var rows = new List<string>();
+        if (normalized.Contains('\n'))
+        {
+            var lines = normalized.Split('\n');
+            foreach (var line in lines)
+            {
+                var chars = line.Where(IsHexChar)
+                    .Select(char.ToUpperInvariant)
+                    .ToArray();
+
+                if (chars.Length == 0)
+                {
+                    continue;
+                }
+
+                var chunks = SplitIntoChunks(chars);
+                AppendRows(rows, chunks);
+            }
+        }
+        else
+        {
+            var chars = normalized.Where(IsHexChar)
+                .Select(char.ToUpperInvariant)
+                .ToArray();
+
+            if (chars.Length == 0)
+            {
+                return [];
+            }
+
+            var chunks = SplitIntoChunks(chars);
+            AppendRows(rows, chunks);
+        }
+
+        if (rows.Count % 2 != 0)
+        {
+            rows.Add(string.Empty);
+        }
+
+        return rows;
+    }
+
+    private static string FormatCheatBlocks(IEnumerable<string> blocks)
+    {
+        var formattedBlocks = blocks.ToList();
+        if (formattedBlocks.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (formattedBlocks.Count % 2 != 0)
+        {
+            formattedBlocks.Add(string.Empty);
+        }
+
+        var lines = new List<string>();
+        for (var i = 0; i < formattedBlocks.Count; i += 2)
+        {
+            var left = formattedBlocks[i];
+            var right = formattedBlocks[i + 1];
+            if (string.IsNullOrEmpty(left) && string.IsNullOrEmpty(right))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(right))
+            {
+                lines.Add(left);
+                continue;
+            }
+
+            lines.Add($"{left} {right}");
+        }
+
+        return string.Join("\n", lines);
+    }
+
+    private static List<string> SplitIntoChunks(char[] chars)
+    {
+        var chunks = new List<string>();
+        for (var i = 0; i < chars.Length; i += 8)
+        {
+            var length = Math.Min(8, chars.Length - i);
+            chunks.Add(new string(chars, i, length));
+        }
+
+        return chunks;
+    }
+
+    private static void AppendRows(List<string> rows, List<string> chunks)
+    {
+        for (var i = 0; i < chunks.Count; i += 2)
+        {
+            rows.Add(chunks[i]);
+            rows.Add(i + 1 < chunks.Count ? chunks[i + 1] : string.Empty);
+        }
+    }
+
+    private static bool IsHexChar(char ch)
+    {
+        return ch is >= '0' and <= '9' || ch is >= 'a' and <= 'f' || ch is >= 'A' and <= 'F';
     }
 
 }

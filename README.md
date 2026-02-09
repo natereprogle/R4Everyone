@@ -16,20 +16,18 @@ were designed to edit usrcheat.dat R4 files.
 
 1. Not all r4cce features have been implemented (See below).
 2. Not yet fully reactive, meaning it requires a display of at least 992x530 pixels to work.
-3. It does not work on iPhone due to screen size, but it _does_ work on iPad. However, an error appears on the app that
-   says an error occurred and to reload. However, the app will still function.
-4. Does not work on larger files. WASM has memory limitations, and editing large files will cause WASM to OOM.
+3. It does not work on most phones due to screen size, but it _does_ work on iPad and potentially foldables like the
+   Samsung Galaxy Z Fold or Google Pixel Fold. However, an error appears on the app that says an error occurred and to
+   reload. However, the app will still function.
 
 ## Planned Features
 
 1. Undo/redo support
-2. Better cheat code editor (Copy/paste support)
-3. Support for adding triggers
-4. Sorting/moving items
-5. Dark mode
-6. Import/export XML
-7. Mobile support (Fully reactive layout)
-8. Confirmation before deleting games or folders that have content or cheats that have been modified from "default"
+2. Support for adding triggers
+3. Sorting/moving items
+4. Import/export XML
+5. Mobile support (Fully reactive layout)
+6. Confirmation before deleting games or folders that have content or cheats that have been modified from "default"
 
 # Why R4Everyone when r4cce works just fine?
 

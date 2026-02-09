@@ -1,5 +1,4 @@
 using System.Text;
-using System.Collections.Generic;
 using Serilog;
 
 namespace R4Everyone.Binary4Everyone;
