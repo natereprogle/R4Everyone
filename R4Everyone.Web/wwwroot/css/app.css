@@ -161,6 +161,9 @@ body {
 .app-title {
     justify-self: start;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .app-title .title {
@@ -173,10 +176,29 @@ body {
     color: var(--subtitle-text);
 }
 
+.title-stack {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
 .app-logo {
     justify-self: center;
     display: flex;
     justify-content: center;
+}
+
+.app-logo-button {
+    border: none;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 0.75rem;
+}
+
+.app-logo-button:focus-visible {
+    outline: 2px solid var(--subtitle-text);
+    outline-offset: 4px;
 }
 
 .app-status {
@@ -187,10 +209,14 @@ body {
     min-width: 0;
 }
 
+.card-body {
+    color: var(--text-color) !important;
+}
+
 .theme-toggle {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.25rem;
 }
 
 .theme-toggle-label {
@@ -203,6 +229,43 @@ body {
     background-color: var(--panel-bg);
     color: var(--text-color);
     border-color: var(--border-color);
+}
+
+.theme-toggle-icons {
+    gap: 0.35rem;
+}
+
+.theme-icon {
+    width: 2.1rem;
+    height: 2.1rem;
+    border: 1px solid transparent;
+    border-radius: 0.6rem;
+    background: transparent;
+    color: var(--header-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.theme-icon svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.theme-icon.is-active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+:root[data-theme="dark"] .theme-icon.is-active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
 }
 
 .app-body {
@@ -505,6 +568,64 @@ body {
     display: grid;
     grid-template-rows: 1fr 1fr;
     gap: 1rem;
+}
+
+.changelog-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(31, 42, 48, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1060;
+}
+
+.changelog-modal {
+    background: var(--app-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    width: min(720px, 92vw);
+    height: min(640px, 85vh);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 50px rgba(31, 42, 48, 0.25);
+}
+
+.changelog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top-right-radius: 1rem;
+    border-top-left-radius: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--panel-header-bg);
+}
+
+.changelog-body {
+    flex: 1;
+    min-height: 0;
+    padding: 1rem;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.changelog-section h6 {
+    font-weight: 600;
+    color: var(--accent-light);
+}
+
+.changelog-section ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.changelog-version {
+    font-size: 0.85rem;
+    color: var(--muted-text);
 }
 
 .game-scoped-tree {

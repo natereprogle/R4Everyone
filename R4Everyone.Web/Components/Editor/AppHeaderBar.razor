@@ -2,22 +2,47 @@
 
 <div class="app-header">
     <div class="app-title">
-        <div class="title">R4Everyone</div>
-        <div class="subtitle">@Subtitle</div>
+        <div class="theme-toggle theme-toggle-icons" role="group" aria-label="Theme preference">
+            <button type="button" class="theme-icon @(_themePreference == "system" ? "is-active" : string.Empty)"
+                    @onclick="@(() => SetTheme("system"))" aria-label="System theme" title="System">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+                    <rect x="9" y="18" width="6" height="2" rx="1"></rect>
+                </svg>
+            </button>
+            <button type="button" class="theme-icon @(_themePreference == "light" ? "is-active" : string.Empty)"
+                    @onclick="@(() => SetTheme("light"))" aria-label="Light theme" title="Light">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="4.5"></circle>
+                    <line x1="12" y1="2.5" x2="12" y2="5"></line>
+                    <line x1="12" y1="19" x2="12" y2="21.5"></line>
+                    <line x1="2.5" y1="12" x2="5" y2="12"></line>
+                    <line x1="19" y1="12" x2="21.5" y2="12"></line>
+                    <line x1="4.6" y1="4.6" x2="6.3" y2="6.3"></line>
+                    <line x1="17.7" y1="17.7" x2="19.4" y2="19.4"></line>
+                    <line x1="4.6" y1="19.4" x2="6.3" y2="17.7"></line>
+                    <line x1="17.7" y1="6.3" x2="19.4" y2="4.6"></line>
+                </svg>
+            </button>
+            <button type="button" class="theme-icon @(_themePreference == "dark" ? "is-active" : string.Empty)"
+                    @onclick="@(() => SetTheme("dark"))" aria-label="Dark theme" title="Dark">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M15.4 3.6A8.5 8.5 0 1 0 20.4 16a7 7 0 0 1-5-12.4z"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="title-stack">
+            <div class="title">R4Everyone</div>
+            <div class="subtitle">@Subtitle</div>
+        </div>
     </div>
     <div class="app-logo">
-        <img src="icon-192.png" alt="R4E Logo" style="height: 64px; width: 64px;"/>
+        <button type="button" class="app-logo-button" title="View changelog" aria-label="Open changelog"
+                @onclick="OnShowChangelog">
+            <img src="icon-192.png" alt="R4E Logo" style="height: 64px; width: 64px;"/>
+        </button>
     </div>
     <div class="app-status">
-        <div class="theme-toggle">
-            <label class="theme-toggle-label" for="themePreference">Theme</label>
-            <select id="themePreference" class="form-select form-select-sm" value="@_themePreference"
-                    @onchange="OnThemeChanged" aria-label="Theme preference">
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-            </select>
-        </div>
         @if (IsDirty)
         {
             <span class="badge text-bg-warning">Unsaved changes</span>
@@ -39,6 +64,7 @@
     [Parameter] public bool IsDirty { get; set; }
     [Parameter] public bool IsValid { get; set; }
     [Parameter] public IReadOnlyList<string> Errors { get; set; } = [];
+    [Parameter] public EventCallback OnShowChangelog { get; set; }
 
     private string _themePreference = "system";
 
@@ -59,9 +85,8 @@
         }
     }
 
-    private async Task OnThemeChanged(ChangeEventArgs args)
+    private async Task SetTheme(string preference)
     {
-        var preference = args.Value?.ToString();
         if (string.IsNullOrWhiteSpace(preference))
             return;
 

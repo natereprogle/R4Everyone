@@ -9,7 +9,7 @@
     <script>
         (function () {
             try {
-                var preference = localStorage.getItem("r4e-theme");
+                const preference = localStorage.getItem("r4e-theme");
                 if (preference && preference !== "system") {
                     document.documentElement.setAttribute("data-theme", preference);
                 }
@@ -39,16 +39,12 @@
     </div>
 </div>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
 <script src="js/viewport.js"></script>
 <script src="js/download.js"></script>
 <script src="js/lazy-images.js"></script>
 <script src="js/image-check.js"></script>
 <script src="js/cheat-editor.js"></script>
+<script src="js/changelog.js"></script>
 <script src="js/theme.js"></script>
 <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 <script>

@@ -5,6 +5,7 @@
 @inject IJSRuntime Js
 @inject ToastService Toasts
 @inject XmlDataService Xml;
+@using System.Reflection
 @using System.Xml.Linq
 
 <PageTitle>R4Everyone</PageTitle>
@@ -24,7 +25,8 @@ else
 {
     <div class="app-shell">
         <AppHeaderBar FileName="@Editor.LoadedFileName" HasLoadedFile="Editor.HasLoadedFile" IsDirty="Editor.IsDirty"
-                      IsValid="Editor.IsValid" Errors="Editor.ValidationErrors"/>
+                      IsValid="Editor.IsValid" Errors="Editor.ValidationErrors"
+                      OnShowChangelog="OpenChangelog"/>
 
         <div class="app-body container-fluid">
             <div class="row h-100 g-3">
@@ -65,6 +67,10 @@ else
                          OnCheatDescriptionInput="OnCheatDescriptionInput"
                          OnCheatEnabledChanged="OnCheatEnabledChanged"
                          OnCheatCodeInput="OnCheatCodeInput"/>
+
+        <ChangelogModal IsOpen="_isChangelogOpen"
+                        AppVersion="@_appVersion"
+                        OnClose="CloseChangelog"/>
     </div>
 }
 
@@ -72,6 +78,9 @@ else
     private bool _isDesktop = true;
     private bool _isGameModalOpen;
     private R4Game? _modalGame;
+    private bool _isChangelogOpen;
+    private bool _changelogChecked;
+    private string _appVersion = "1.0.0";
 
     private bool IsGameModalOpen => _isGameModalOpen && _modalGame != null;
 
@@ -88,6 +97,7 @@ else
     {
         Editor.StateChanged += HandleStateChanged;
         Viewport.ViewportChanged += HandleViewportChanged;
+        _appVersion = GetAppVersion();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -96,6 +106,7 @@ else
         {
             await Viewport.InitializeAsync();
             _isDesktop = Viewport.IsDesktop;
+            await CheckChangelogAsync();
             StateHasChanged();
         }
     }
@@ -555,6 +566,43 @@ else
     private static bool IsHexChar(char ch)
     {
         return ch is >= '0' and <= '9' || ch is >= 'a' and <= 'f' || ch is >= 'A' and <= 'F';
+    }
+
+    private string GetAppVersion()
+    {
+        var attr = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        if (!string.IsNullOrWhiteSpace(attr?.InformationalVersion))
+        {
+            return attr!.InformationalVersion.Split('+')[0];
+        }
+
+        return typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+    }
+
+    private async Task CheckChangelogAsync()
+    {
+        if (_changelogChecked)
+        {
+            return;
+        }
+
+        _changelogChecked = true;
+        var seenVersion = await Js.InvokeAsync<string>("r4eChangelog.getSeenVersion");
+        if (!string.Equals(seenVersion, _appVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            _isChangelogOpen = true;
+        }
+    }
+
+    private void OpenChangelog()
+    {
+        _isChangelogOpen = true;
+    }
+
+    private async Task CloseChangelog()
+    {
+        _isChangelogOpen = false;
+        await Js.InvokeVoidAsync("r4eChangelog.setSeenVersion", _appVersion);
     }
 
 }
