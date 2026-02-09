@@ -5,6 +5,8 @@
 @inject IJSRuntime Js
 @inject ToastService Toasts
 @inject XmlDataService Xml;
+@using System.Reflection
+@using System.Xml.Linq
 
 <PageTitle>R4Everyone</PageTitle>
 
@@ -23,7 +25,8 @@ else
 {
     <div class="app-shell">
         <AppHeaderBar FileName="@Editor.LoadedFileName" HasLoadedFile="Editor.HasLoadedFile" IsDirty="Editor.IsDirty"
-                      IsValid="Editor.IsValid" Errors="Editor.ValidationErrors"/>
+                      IsValid="Editor.IsValid" Errors="Editor.ValidationErrors"
+                      OnShowChangelog="OpenChangelog"/>
 
         <div class="app-body container-fluid">
             <div class="row h-100 g-3">
@@ -49,7 +52,7 @@ else
         <GameEditorModal IsOpen="IsGameModalOpen"
                          Game="_modalGame"
                          MasterCodes="MasterCodes"
-                         CheatCodeRows="CheatCodeRows"
+                         CheatCodeText="@CheatCodeText"
                          OnClose="@CloseGameModal"
                          OnGameIdInput="OnGameIdInput"
                          OnGameTitleInput="OnGameTitleInput"
@@ -63,9 +66,11 @@ else
                          OnCheatTitleInput="OnCheatTitleInput"
                          OnCheatDescriptionInput="OnCheatDescriptionInput"
                          OnCheatEnabledChanged="OnCheatEnabledChanged"
-                         OnCheatBlockInput="OnCheatBlockInput"
-                         OnAddCheatRow="AddCheatRow"
-                         OnRemoveCheatRow="RemoveCheatRow"/>
+                         OnCheatCodeInput="OnCheatCodeInput"/>
+
+        <ChangelogModal IsOpen="_isChangelogOpen"
+                        AppVersion="@_appVersion"
+                        OnClose="CloseChangelog"/>
     </div>
 }
 
@@ -73,6 +78,9 @@ else
     private bool _isDesktop = true;
     private bool _isGameModalOpen;
     private R4Game? _modalGame;
+    private bool _isChangelogOpen;
+    private bool _changelogChecked;
+    private string _appVersion = "1.0.0";
 
     private bool IsGameModalOpen => _isGameModalOpen && _modalGame != null;
 
@@ -81,16 +89,15 @@ else
 
     private string[] MasterCodes => GetMasterCodes();
 
-    private List<string> CheatCodeRows => Editor.SelectedCheat == null
-        ? []
-        : Editor.GetCheatCodeBlocks(Editor.SelectedCheat)
-            .Select(ToBigEndianHex)
-            .ToList();
+    private string CheatCodeText => Editor.SelectedCheat == null
+        ? string.Empty
+        : FormatCheatBlocks(Editor.GetCheatCodeBlocks(Editor.SelectedCheat).Select(ToBigEndianHex));
 
     protected override void OnInitialized()
     {
         Editor.StateChanged += HandleStateChanged;
         Viewport.ViewportChanged += HandleViewportChanged;
+        _appVersion = GetAppVersion();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -99,6 +106,7 @@ else
         {
             await Viewport.InitializeAsync();
             _isDesktop = Viewport.IsDesktop;
+            await CheckChangelogAsync();
             StateHasChanged();
         }
     }
@@ -133,13 +141,77 @@ else
 
     private async Task<string> OnRenderGame(R4Game game)
     {
-        Console.WriteLine($"[OnRenderGame {game.GameId}] Attempting to get database file to load game content with");
-        var gameImageUrl = await Xml.FindGameByIdAsync("assets/dstdb.xml", game.GameId);
-        Console.WriteLine($"[OnRenderGame {game.GameId}] Got database file, attempting to find image");
-        if (gameImageUrl is null) return string.Empty;
-        var lang = (string)gameImageUrl.Element("locale")!.Attribute("lang")!;
-        Console.WriteLine($"[OnRenderGame {game.GameId}] Found image");
-        return $"https://art.gametdb.com/ds/coverM/{lang}/{game.GameId}.jpg";
+        if (string.IsNullOrWhiteSpace(game.GameId))
+        {
+            return string.Empty;
+        }
+
+        var gameElement = await Xml.FindGameByIdAsync("assets/dstdb.xml", game.GameId);
+        if (gameElement is null)
+        {
+            return string.Empty;
+        }
+
+        var languages = GetLanguageCandidates(gameElement);
+        foreach (var url in languages.Select(lang => $"https://art.gametdb.com/ds/coverM/{lang}/{game.GameId}.jpg"))
+        {
+            if (await ImageExistsAsync(url))
+            {
+                return url;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static List<string> GetLanguageCandidates(XElement gameElement)
+    {
+        var localeLanguages = gameElement.Elements("locale")
+            .Select(locale => locale.Attribute("lang")?.Value)
+            .Where(lang => !string.IsNullOrWhiteSpace(lang))
+            .Select(lang => lang!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var languages = localeLanguages;
+        if (languages.Count == 0)
+        {
+            var languageText = (string?)gameElement.Element("languages");
+            if (!string.IsNullOrWhiteSpace(languageText))
+            {
+                languages = languageText
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(lang => lang.Trim())
+                    .Where(lang => !string.IsNullOrWhiteSpace(lang))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+        }
+
+        if (languages.Count == 0)
+        {
+            return [];
+        }
+
+        var enIndex = languages.FindIndex(lang => lang.Equals("EN", StringComparison.OrdinalIgnoreCase));
+        if (enIndex <= 0) return languages;
+        var enValue = languages[enIndex];
+        languages.RemoveAt(enIndex);
+        languages.Insert(0, enValue);
+
+        return languages;
+    }
+
+    private async Task<bool> ImageExistsAsync(string url)
+    {
+        try
+        {
+            return await Js.InvokeAsync<bool>("r4eImages.check", url);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void CloseGameModal()
@@ -175,11 +247,9 @@ else
         var removedGame = Editor.SelectedGame;
         Editor.RemoveSelected();
 
-        if (_isGameModalOpen && ReferenceEquals(removedGame, _modalGame))
-        {
-            _isGameModalOpen = false;
-            _modalGame = null;
-        }
+        if (!_isGameModalOpen || !ReferenceEquals(removedGame, _modalGame)) return;
+        _isGameModalOpen = false;
+        _modalGame = null;
     }
 
 
@@ -225,7 +295,8 @@ else
         }
 
         var input = args.Value?.ToString() ?? string.Empty;
-        Editor.UpdateMasterCode(game, index, ToLittleEndianHex(input));
+        var sanitized = SanitizeHexInput(input, 8);
+        Editor.UpdateMasterCode(game, index, ToLittleEndianHex(sanitized));
     }
 
     private void OnFolderTitleInput(ChangeEventArgs args)
@@ -260,35 +331,17 @@ else
         Editor.UpdateCheatEnabled(args.Value is true);
     }
 
-    private void OnCheatBlockInput(int index, ChangeEventArgs args)
+    private void OnCheatCodeInput(string value)
     {
         if (Editor.SelectedCheat == null)
         {
             return;
         }
 
-        var input = args.Value?.ToString() ?? string.Empty;
-        Editor.UpdateCheatBlock(Editor.SelectedCheat, index, ToLittleEndianHex(input));
-    }
-
-    private void AddCheatRow()
-    {
-        if (Editor.SelectedCheat == null)
-        {
-            return;
-        }
-
-        Editor.AddCheatRow(Editor.SelectedCheat);
-    }
-
-    private void RemoveCheatRow(int rowIndex)
-    {
-        if (Editor.SelectedCheat == null)
-        {
-            return;
-        }
-
-        Editor.RemoveCheatRow(Editor.SelectedCheat, rowIndex);
+        var blocks = ParseCheatRows(value)
+            .Select(ToLittleEndianHex)
+            .ToList();
+        Editor.UpdateCheatBlocks(Editor.SelectedCheat, blocks);
     }
 
     private async Task OnRomFileSelected(InputFileChangeEventArgs args)
@@ -300,7 +353,7 @@ else
         }
 
         var file = args.File;
-        // Allows files of any size to be open, since we're only reading the first 512 bytes and it's local anyways.
+        // Allows files of any size to be open, since we're only reading the first 512 bytes, and it's local anyway.
         await using var stream = file.OpenReadStream(int.MaxValue);
         var buffer = new byte[512];
         var bytesRead = await stream.ReadAsync(buffer);
@@ -314,12 +367,12 @@ else
 
     private async Task OnOpenFileSelected(InputFileChangeEventArgs args)
     {
+        Toasts.ShowInfo("Opening file...");
         var file = args.File;
         await using var stream = file.OpenReadStream(int.MaxValue);
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms);
         ms.Position = 0;
-        Toasts.ShowInfo("Opening file...");
         await Editor.LoadAsync(ms, file.Name);
     }
 
@@ -377,6 +430,179 @@ else
             value.AsSpan(4, 2),
             value.AsSpan(2, 2),
             value.AsSpan(0, 2));
+    }
+
+    private static string SanitizeHexInput(string input, int maxLength)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return string.Empty;
+        }
+
+        var buffer = new List<char>(Math.Min(input.Length, maxLength));
+        foreach (var ch in input)
+        {
+            if (!IsHexChar(ch))
+            {
+                continue;
+            }
+
+            buffer.Add(char.ToUpperInvariant(ch));
+            if (buffer.Count == maxLength)
+            {
+                break;
+            }
+        }
+
+        return new string(buffer.ToArray());
+    }
+
+    private static List<string> ParseCheatRows(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return [];
+        }
+
+        var normalized = input.Replace("\r\n", "\n").Replace("\r", "\n");
+        var rows = new List<string>();
+        if (normalized.Contains('\n'))
+        {
+            var lines = normalized.Split('\n');
+            foreach (var line in lines)
+            {
+                var chars = line.Where(IsHexChar)
+                    .Select(char.ToUpperInvariant)
+                    .ToArray();
+
+                if (chars.Length == 0)
+                {
+                    continue;
+                }
+
+                var chunks = SplitIntoChunks(chars);
+                AppendRows(rows, chunks);
+            }
+        }
+        else
+        {
+            var chars = normalized.Where(IsHexChar)
+                .Select(char.ToUpperInvariant)
+                .ToArray();
+
+            if (chars.Length == 0)
+            {
+                return [];
+            }
+
+            var chunks = SplitIntoChunks(chars);
+            AppendRows(rows, chunks);
+        }
+
+        if (rows.Count % 2 != 0)
+        {
+            rows.Add(string.Empty);
+        }
+
+        return rows;
+    }
+
+    private static string FormatCheatBlocks(IEnumerable<string> blocks)
+    {
+        var formattedBlocks = blocks.ToList();
+        if (formattedBlocks.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (formattedBlocks.Count % 2 != 0)
+        {
+            formattedBlocks.Add(string.Empty);
+        }
+
+        var lines = new List<string>();
+        for (var i = 0; i < formattedBlocks.Count; i += 2)
+        {
+            var left = formattedBlocks[i];
+            var right = formattedBlocks[i + 1];
+            if (string.IsNullOrEmpty(left) && string.IsNullOrEmpty(right))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(right))
+            {
+                lines.Add(left);
+                continue;
+            }
+
+            lines.Add($"{left} {right}");
+        }
+
+        return string.Join("\n", lines);
+    }
+
+    private static List<string> SplitIntoChunks(char[] chars)
+    {
+        var chunks = new List<string>();
+        for (var i = 0; i < chars.Length; i += 8)
+        {
+            var length = Math.Min(8, chars.Length - i);
+            chunks.Add(new string(chars, i, length));
+        }
+
+        return chunks;
+    }
+
+    private static void AppendRows(List<string> rows, List<string> chunks)
+    {
+        for (var i = 0; i < chunks.Count; i += 2)
+        {
+            rows.Add(chunks[i]);
+            rows.Add(i + 1 < chunks.Count ? chunks[i + 1] : string.Empty);
+        }
+    }
+
+    private static bool IsHexChar(char ch)
+    {
+        return ch is >= '0' and <= '9' || ch is >= 'a' and <= 'f' || ch is >= 'A' and <= 'F';
+    }
+
+    private string GetAppVersion()
+    {
+        var attr = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        if (!string.IsNullOrWhiteSpace(attr?.InformationalVersion))
+        {
+            return attr!.InformationalVersion.Split('+')[0];
+        }
+
+        return typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+    }
+
+    private async Task CheckChangelogAsync()
+    {
+        if (_changelogChecked)
+        {
+            return;
+        }
+
+        _changelogChecked = true;
+        var seenVersion = await Js.InvokeAsync<string>("r4eChangelog.getSeenVersion");
+        if (!string.Equals(seenVersion, _appVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            _isChangelogOpen = true;
+        }
+    }
+
+    private void OpenChangelog()
+    {
+        _isChangelogOpen = true;
+    }
+
+    private async Task CloseChangelog()
+    {
+        _isChangelogOpen = false;
+        await Js.InvokeVoidAsync("r4eChangelog.setSeenVersion", _appVersion);
     }
 
 }

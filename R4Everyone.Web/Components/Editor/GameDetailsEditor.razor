@@ -34,16 +34,15 @@
 
 <div class="mastercodes">
     <div class="section-title">Master Codes</div>
-    @for (var i = 0; i < MasterCodes.Length; i++)
+    @for (var rowIndex = 0; rowIndex < 2; rowIndex++)
     {
-        <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="text-muted">@((i + 1).ToString("D2"))</span>
-
-            @{
-                var index = i;
+        <div class="d-flex gap-2 mb-2">
+            @for (var colIndex = 0; colIndex < 4; colIndex++)
+            {
+                var index = (rowIndex * 4) + colIndex;
+                <input class="form-control code-input" value="@MasterCodes[index]" minlength="8" maxlength="8"
+                       @oninput="(e) => OnMasterCodeInput?.Invoke(index, e)"/>
             }
-            <input class="form-control code-input" value="@MasterCodes[index]"
-                   @oninput="(e) => OnMasterCodeInput?.Invoke(index, e)"/>
         </div>
     }
 </div>

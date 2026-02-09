@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>R4Everyone.Web</title>
     <base href="/"/>
+    <script>
+        (function () {
+            try {
+                const preference = localStorage.getItem("r4e-theme");
+                if (preference && preference !== "system") {
+                    document.documentElement.setAttribute("data-theme", preference);
+                }
+            } catch (error) {
+                // Ignore storage errors.
+            }
+        })();
+    </script>
     <link rel="preload" id="webassembly"/>
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/app.css"/>
@@ -27,14 +39,13 @@
     </div>
 </div>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
 <script src="js/viewport.js"></script>
 <script src="js/download.js"></script>
 <script src="js/lazy-images.js"></script>
+<script src="js/image-check.js"></script>
+<script src="js/cheat-editor.js"></script>
+<script src="js/changelog.js"></script>
+<script src="js/theme.js"></script>
 <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 <script>
     navigator.serviceWorker.register('service-worker.js', {updateViaCache: 'none'});

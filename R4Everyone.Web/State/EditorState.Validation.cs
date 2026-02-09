@@ -90,12 +90,14 @@ public partial class EditorState
                 $"Cheat '{cheat.Title}' in '{GetGameDisplayTitle(game)}' must have an even number of code blocks.");
         }
 
-        for (var i = 0; i < blocks.Count; i++)
+        for (var i = 0; i < blocks.Count; i += 2)
         {
-            if (!IsHex(blocks[i], 8))
+            var left = blocks[i];
+            var right = i + 1 < blocks.Count ? blocks[i + 1] : string.Empty;
+            if (!IsHex(left, 8) || !IsHex(right, 8))
             {
                 errors.Add(
-                    $"Cheat '{cheat.Title}' in '{GetGameDisplayTitle(game)}' block {i + 1} must be 8 hex characters.");
+                    $"Cheat '{cheat.Title}' in '{GetGameDisplayTitle(game)}' row {i / 2 + 1} must have 2 blocks of 8 hex characters.");
             }
         }
     }

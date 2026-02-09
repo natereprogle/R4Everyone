@@ -7,9 +7,10 @@
         <div class="toast show align-items-center @GetToastClass(toast) mb-2" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body">
-                    @toast.Message
+                    <div class="toast-tag">@GetToastLabel(toast)</div>
+                    <div class="toast-message">@toast.Message</div>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close"
+                <button type="button" class="btn-close me-2 m-auto" aria-label="Close"
                         @onclick="() => Toasts.Dismiss(toast.Id)"></button>
             </div>
         </div>
@@ -39,6 +40,16 @@
 
         var closingClass = toast.IsClosing ? "toast-exit" : string.Empty;
         return string.IsNullOrWhiteSpace(closingClass) ? stateClass : $"{stateClass} {closingClass}";
+    }
+
+    private static string GetToastLabel(ToastMessage toast)
+    {
+        return toast.State switch
+        {
+            ToastState.Warning => "WARNING",
+            ToastState.Error => "ERROR",
+            _ => "INFO"
+        };
     }
 
     public void Dispose()

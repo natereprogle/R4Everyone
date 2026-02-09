@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-
 namespace R4Everyone.Binary4Everyone;
 
 internal sealed class R4LazyGameSlot
@@ -66,7 +63,7 @@ internal sealed class R4LazyGameSlot
 
     public ReadOnlyMemory<byte> GetRawSlice()
     {
-        var snapshot = _database.SnapshotBytes ?? Array.Empty<byte>();
+        var snapshot = _database.SnapshotBytes ?? [];
         return snapshot.AsMemory((int)SourceOffset, (int)SourceLength);
     }
 

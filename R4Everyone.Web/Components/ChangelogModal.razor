@@ -1,0 +1,63 @@
+@if (IsOpen)
+{
+    <div class="changelog-backdrop" @onclick="OnClose">
+        <div class="changelog-modal" @onclick:stopPropagation="true">
+            <div class="changelog-header">
+                <div>
+                    <div class="modal-title">Changelog</div>
+                    <div class="changelog-version">Version @AppVersion</div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnClose">Close</button>
+            </div>
+            <div class="changelog-body">
+                <div class="changelog-section">
+                    <h4>Version 1.1.0</h4>
+                    <div class="changelog-section">
+                        <h6>General</h6>
+                        <ul>
+                            <li>Redesigned R4Everyone, which now uses a grid layout instead of a simple tree view</li>
+                            <li>The game grid will attempt to load cover art from GameTDB (Which is why the app takes a
+                                few seconds to load, it must pre-process the GameTDB database).
+                            </li>
+                            <li>If cover art cannot be downloaded, a placeholder will be used instead.</li>
+                            <li>Art will not be loaded until the game intersects the viewport.</li>
+                            <li>R4Everyone now has a dark mode, and will remember your selection!</li>
+                            <li>R4Everyone can now handle larger files due to lazy parsing. Games are not parsed until
+                                selected. On save, the app recalculates everything before writing the file.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="changelog-section">
+                    <h6>Editor</h6>
+                    <ul>
+                        <li>Master code editor has been redesigned to be 2 rows of 4-byte text fields instead of 8
+                            individual rows.
+                        </li>
+                        <li>Cheat code editor has been completely overhauled to be a single Text Field instead of
+                            multiple "rows" of text fields.
+                        </li>
+                        <li>The cheat code editor will now self-format when typing, and blocks non-hexadecimal
+                            characters from being entered.
+                        </li>
+                    </ul>
+                </div>
+                <div class="changelog-section">
+                    <h6>Notes</h6>
+                    <ul>
+                        <li>This changelog will appear on the first run of the app only, and will not appear again
+                            unless the app is updated.
+                        </li>
+                        <li>Click the logo in the header to view it anytime.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string AppVersion { get; set; } = "1.0.0";
+    [Parameter] public EventCallback OnClose { get; set; }
+}

@@ -288,6 +288,16 @@ public partial class EditorState
         MarkDirty();
     }
 
+    public void UpdateCheatBlocks(R4Cheat cheat, List<string> blocks)
+    {
+        EnsureCheatCodeBuffer(cheat);
+        var buffer = _cheatCodeText[cheat];
+        buffer.Clear();
+        buffer.AddRange(blocks);
+        SyncCheatCodes(cheat, buffer);
+        MarkDirty();
+    }
+
     public void AddCheatRow(R4Cheat cheat)
     {
         EnsureCheatCodeBuffer(cheat);

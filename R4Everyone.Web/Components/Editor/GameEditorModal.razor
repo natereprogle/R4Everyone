@@ -59,13 +59,11 @@
                                 case SelectionKind.Cheat when Editor.SelectedCheat != null:
                                     <CheatDetailsEditor
                                         Cheat="Editor.SelectedCheat"
-                                        CodeRows="CheatCodeRows"
+                                        CheatCodeText="@CheatCodeText"
                                         OnCheatTitleInput="OnCheatTitleInput"
                                         OnCheatDescriptionInput="OnCheatDescriptionInput"
                                         OnCheatEnabledChanged="OnCheatEnabledChanged"
-                                        OnCheatBlockInput="OnCheatBlockInput"
-                                        OnAddCheatRow="OnAddCheatRow"
-                                        OnRemoveCheatRow="OnRemoveCheatRow"/>
+                                        OnCheatCodeInput="OnCheatCodeInput"/>
                                     break;
                                 case SelectionKind.None:
                                 case SelectionKind.Game:
@@ -90,7 +88,7 @@
     [Parameter] public R4Game? Game { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public string[] MasterCodes { get; set; } = [];
-    [Parameter] public List<string> CheatCodeRows { get; set; } = [];
+    [Parameter] public string CheatCodeText { get; set; } = string.Empty;
 
     [Parameter] public EventCallback<ChangeEventArgs> OnGameIdInput { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnGameTitleInput { get; set; }
@@ -106,9 +104,7 @@
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatTitleInput { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
-    [Parameter] public Action<int, ChangeEventArgs>? OnCheatBlockInput { get; set; }
-    [Parameter] public EventCallback OnAddCheatRow { get; set; }
-    [Parameter] public Action<int>? OnRemoveCheatRow { get; set; }
+    [Parameter] public EventCallback<string> OnCheatCodeInput { get; set; }
 
     private bool CanRemoveFolder => Editor.SelectionKind == SelectionKind.Folder;
     private bool CanRemoveCheat => Editor.SelectionKind == SelectionKind.Cheat;
