@@ -3,6 +3,10 @@
 R4Everyone is an open-source, web-based modern alternative to R4 Cheat Code Editor, known as r4cce. Both applications
 were designed to edit usrcheat.dat R4 files.
 
+# Screenshots
+![Main UI](images/R4Everyone%20Main%20Screen.png)
+![Editor](images/R4Everyone%20Game%20Editor.png)
+
 # Features & Limitations
 
 ## Features
@@ -17,8 +21,7 @@ were designed to edit usrcheat.dat R4 files.
 1. Not all r4cce features have been implemented (See below).
 2. Not yet fully reactive, meaning it requires a display of at least 992x530 pixels to work.
 3. It does not work on most phones due to screen size, but it _does_ work on iPad and potentially foldables like the
-   Samsung Galaxy Z Fold or Google Pixel Fold. However, an error appears on the app that says an error occurred and to
-   reload. However, the app will still function.
+   Samsung Galaxy Z Fold or Google Pixel Fold.
 
 ## Planned Features
 
