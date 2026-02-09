@@ -5,6 +5,7 @@
 @inject IJSRuntime Js
 @inject ToastService Toasts
 @inject XmlDataService Xml;
+@using System.Xml.Linq
 
 <PageTitle>R4Everyone</PageTitle>
 
@@ -133,13 +134,77 @@ else
 
     private async Task<string> OnRenderGame(R4Game game)
     {
-        Console.WriteLine($"[OnRenderGame {game.GameId}] Attempting to get database file to load game content with");
-        var gameImageUrl = await Xml.FindGameByIdAsync("assets/dstdb.xml", game.GameId);
-        Console.WriteLine($"[OnRenderGame {game.GameId}] Got database file, attempting to find image");
-        if (gameImageUrl is null) return string.Empty;
-        var lang = (string)gameImageUrl.Element("locale")!.Attribute("lang")!;
-        Console.WriteLine($"[OnRenderGame {game.GameId}] Found image");
-        return $"https://art.gametdb.com/ds/coverM/{lang}/{game.GameId}.jpg";
+        if (string.IsNullOrWhiteSpace(game.GameId))
+        {
+            return string.Empty;
+        }
+
+        var gameElement = await Xml.FindGameByIdAsync("assets/dstdb.xml", game.GameId);
+        if (gameElement is null)
+        {
+            return string.Empty;
+        }
+
+        var languages = GetLanguageCandidates(gameElement);
+        foreach (var url in languages.Select(lang => $"https://art.gametdb.com/ds/coverM/{lang}/{game.GameId}.jpg"))
+        {
+            if (await ImageExistsAsync(url))
+            {
+                return url;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static List<string> GetLanguageCandidates(XElement gameElement)
+    {
+        var localeLanguages = gameElement.Elements("locale")
+            .Select(locale => locale.Attribute("lang")?.Value)
+            .Where(lang => !string.IsNullOrWhiteSpace(lang))
+            .Select(lang => lang!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var languages = localeLanguages;
+        if (languages.Count == 0)
+        {
+            var languageText = (string?)gameElement.Element("languages");
+            if (!string.IsNullOrWhiteSpace(languageText))
+            {
+                languages = languageText
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(lang => lang.Trim())
+                    .Where(lang => !string.IsNullOrWhiteSpace(lang))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+        }
+
+        if (languages.Count == 0)
+        {
+            return [];
+        }
+
+        var enIndex = languages.FindIndex(lang => lang.Equals("EN", StringComparison.OrdinalIgnoreCase));
+        if (enIndex <= 0) return languages;
+        var enValue = languages[enIndex];
+        languages.RemoveAt(enIndex);
+        languages.Insert(0, enValue);
+
+        return languages;
+    }
+
+    private async Task<bool> ImageExistsAsync(string url)
+    {
+        try
+        {
+            return await Js.InvokeAsync<bool>("r4eImages.check", url);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void CloseGameModal()
@@ -175,11 +240,9 @@ else
         var removedGame = Editor.SelectedGame;
         Editor.RemoveSelected();
 
-        if (_isGameModalOpen && ReferenceEquals(removedGame, _modalGame))
-        {
-            _isGameModalOpen = false;
-            _modalGame = null;
-        }
+        if (!_isGameModalOpen || !ReferenceEquals(removedGame, _modalGame)) return;
+        _isGameModalOpen = false;
+        _modalGame = null;
     }
 
 
@@ -300,7 +363,7 @@ else
         }
 
         var file = args.File;
-        // Allows files of any size to be open, since we're only reading the first 512 bytes and it's local anyways.
+        // Allows files of any size to be open, since we're only reading the first 512 bytes, and it's local anyway.
         await using var stream = file.OpenReadStream(int.MaxValue);
         var buffer = new byte[512];
         var bytesRead = await stream.ReadAsync(buffer);
@@ -314,12 +377,12 @@ else
 
     private async Task OnOpenFileSelected(InputFileChangeEventArgs args)
     {
+        Toasts.ShowInfo("Opening file...");
         var file = args.File;
         await using var stream = file.OpenReadStream(int.MaxValue);
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms);
         ms.Position = 0;
-        Toasts.ShowInfo("Opening file...");
         await Editor.LoadAsync(ms, file.Name);
     }
 

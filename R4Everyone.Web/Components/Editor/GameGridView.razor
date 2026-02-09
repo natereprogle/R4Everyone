@@ -13,15 +13,17 @@
             var title = EditorState.GetGameDisplayTitle(game);
             var gameId = game.GameId;
             var imageUrl = GetImageUrl(gameId);
+            var isFailed = IsFailed(gameId);
+            var imageSrc = isFailed ? "assets/failed_cover_fetch.webp" : imageUrl;
             var isLoading = IsLoading(gameId);
             <button type="button" class="game-tile" data-game-id="@gameId"
                     @onclick="() => OnGameSelected.InvokeAsync(game)">
                 <div class="game-image-frame">
                     @if (!string.IsNullOrWhiteSpace(imageUrl))
                     {
-                        <object type="image/jpeg" data="@imageUrl" class="game-tile-image @(isLoading ? "loading" : "")" alt="@title">
-                            <img class="game-tile-image" src="assets/failed_cover_fetch.webp" alt="@title | Failed to fetch cover art"/>
-                        </object>
+                        <!--suppress HtmlDeprecatedAttribute -->
+                        <img class="game-tile-image @(isLoading ? "loading" : "")" src="@imageSrc"
+                             alt="@title" @onload="() => OnImageLoaded(gameId)" @onerror="() => OnImageError(gameId)"/>
                     }
                     else
                     {
@@ -49,8 +51,7 @@
     [Parameter] public IReadOnlyList<R4Game>? Games { get; set; }
     [Parameter] public EventCallback<R4Game> OnGameSelected { get; set; }
     [Parameter] public Func<R4Game, Task<string?>>? ImageUrlSelector { get; set; }
-    private readonly Dictionary<string, (Task<string?> Task, DateTime StartedAt)> _imageTasks = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _requestedGameIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ImageRequestState> _imageTasks = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, R4Game> _gamesById = new(StringComparer.OrdinalIgnoreCase);
     private DotNetObjectReference<GameGridView>? _dotNetRef;
 
@@ -59,7 +60,6 @@
         if (Games == null || ImageUrlSelector == null)
         {
             _imageTasks.Clear();
-            _requestedGameIds.Clear();
             _gamesById.Clear();
             return;
         }
@@ -77,9 +77,6 @@
         foreach (var gameId in _imageTasks.Keys.ToList().Where(gameId => !currentIds.Contains(gameId)))
             _imageTasks.Remove(gameId);
 
-        foreach (var gameId in _requestedGameIds.ToList().Where(gameId => !currentIds.Contains(gameId)))
-            _requestedGameIds.Remove(gameId);
-
         await Task.CompletedTask;
     }
 
@@ -92,10 +89,10 @@
     [JSInvokable]
     public Task NotifyVisible(string gameId)
     {
-        if (string.IsNullOrWhiteSpace(gameId) || !_requestedGameIds.Add(gameId) || _imageTasks.ContainsKey(gameId) || !_gamesById.TryGetValue(gameId, out var game))
+        if (string.IsNullOrWhiteSpace(gameId) || _imageTasks.ContainsKey(gameId) || !_gamesById.TryGetValue(gameId, out var game))
             return Task.CompletedTask;
 
-        _imageTasks[gameId] = (LoadImageAsync(game), DateTime.UtcNow);
+        _imageTasks[gameId] = new ImageRequestState(LoadImageAsync(game));
         return InvokeAsync(StateHasChanged);
     }
 
@@ -120,6 +117,14 @@
         return null;
     }
 
+    private bool IsFailed(string? gameId)
+    {
+        if (string.IsNullOrWhiteSpace(gameId))
+            return false;
+
+        return _imageTasks.TryGetValue(gameId, out var entry) && entry.HasError;
+    }
+
     private bool IsLoading(string? gameId)
     {
         if (string.IsNullOrWhiteSpace(gameId))
@@ -128,11 +133,39 @@
         if (!_imageTasks.TryGetValue(gameId, out var entry))
             return false;
 
-        return DateTime.UtcNow - entry.StartedAt < TimeSpan.FromSeconds(10);
+        return !entry.IsLoaded && DateTime.UtcNow - entry.StartedAt < TimeSpan.FromSeconds(10);
+    }
+
+    private Task OnImageLoaded(string gameId)
+    {
+        if (string.IsNullOrWhiteSpace(gameId) || !_imageTasks.TryGetValue(gameId, out var entry) || entry.IsLoaded)
+            return Task.CompletedTask;
+
+        entry.IsLoaded = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnImageError(string gameId)
+    {
+        if (string.IsNullOrWhiteSpace(gameId) || !_imageTasks.TryGetValue(gameId, out var entry) || entry.HasError)
+            return Task.CompletedTask;
+
+        entry.HasError = true;
+        entry.IsLoaded = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private sealed class ImageRequestState(Task<string?> task)
+    {
+        public Task<string?> Task { get; } = task;
+        public DateTime StartedAt { get; } = DateTime.UtcNow;
+        public bool IsLoaded { get; set; }
+        public bool HasError { get; set; }
     }
 
     public void Dispose()
     {
         _dotNetRef?.Dispose();
     }
+
 }

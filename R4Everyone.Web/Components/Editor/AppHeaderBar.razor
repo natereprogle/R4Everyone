@@ -1,3 +1,5 @@
+@inject IJSRuntime Js
+
 <div class="app-header">
     <div class="app-title">
         <div class="title">R4Everyone</div>
@@ -7,6 +9,15 @@
         <img src="icon-192.png" alt="R4E Logo" style="height: 64px; width: 64px;"/>
     </div>
     <div class="app-status">
+        <div class="theme-toggle">
+            <label class="theme-toggle-label" for="themePreference">Theme</label>
+            <select id="themePreference" class="form-select form-select-sm" value="@_themePreference"
+                    @onchange="OnThemeChanged" aria-label="Theme preference">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+        </div>
         @if (IsDirty)
         {
             <span class="badge text-bg-warning">Unsaved changes</span>
@@ -29,7 +40,32 @@
     [Parameter] public bool IsValid { get; set; }
     [Parameter] public IReadOnlyList<string> Errors { get; set; } = [];
 
+    private string _themePreference = "system";
+
     private string Subtitle => HasLoadedFile ? $"File: {FileName}" : "No file loaded";
 
     private string ValidationBadgeText => $"{Errors.Count} errors";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        var preference = await Js.InvokeAsync<string>("r4eTheme.getPreference");
+        if (!string.IsNullOrWhiteSpace(preference) && !string.Equals(preference, _themePreference, StringComparison.OrdinalIgnoreCase))
+        {
+            _themePreference = preference;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnThemeChanged(ChangeEventArgs args)
+    {
+        var preference = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(preference))
+            return;
+
+        _themePreference = preference;
+        await Js.InvokeVoidAsync("r4eTheme.setPreference", preference);
+    }
 }

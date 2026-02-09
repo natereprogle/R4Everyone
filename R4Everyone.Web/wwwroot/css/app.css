@@ -3,8 +3,91 @@
     --panel-bg: #ffffff;
     --accent: #1f2a30;
     --accent-light: #2f3e46;
+    --header-bg: #1f2a30;
     --border-color: #d6d1c5;
     --highlight: #e7efe7;
+    --text-color: #1f2428;
+    --muted-text: #6c757d;
+    --subtitle-text: #d7d2c6;
+    --header-text: #f7f5f0;
+    --header-border: #151e22;
+    --panel-header-bg: #f9f7f2;
+    --loading-bar-bg: #e2ddd2;
+    --tree-hover-bg: #f3efe5;
+    --tree-selected-border: #8d9b8f;
+    --control-bg: #f0ebe0;
+    --control-disabled-text: #b0a99f;
+    --validation-text: #8b2c2c;
+}
+
+:root[data-theme="light"] {
+    --app-bg: #f2efe8;
+    --panel-bg: #ffffff;
+    --accent: #1f2a30;
+    --accent-light: #2f3e46;
+    --header-bg: #1f2a30;
+    --border-color: #d6d1c5;
+    --highlight: #e7efe7;
+    --text-color: #1f2428;
+    --muted-text: #6c757d;
+    --subtitle-text: #d7d2c6;
+    --header-text: #f7f5f0;
+    --header-border: #151e22;
+    --panel-header-bg: #f9f7f2;
+    --loading-bar-bg: #e2ddd2;
+    --tree-hover-bg: #f3efe5;
+    --tree-selected-border: #8d9b8f;
+    --control-bg: #f0ebe0;
+    --control-disabled-text: #b0a99f;
+    --validation-text: #8b2c2c;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --app-bg: #14181b;
+    --panel-bg: #1c2328;
+    --accent: #9fb7c4;
+    --accent-light: #c2d0da;
+    --header-bg: #0f1418;
+    --border-color: #323b42;
+    --highlight: #25323a;
+    --text-color: #e6ebef;
+    --muted-text: #a1acb5;
+    --subtitle-text: #c9d2d9;
+    --header-text: #eef2f5;
+    --header-border: #0b0f12;
+    --panel-header-bg: #222a30;
+    --loading-bar-bg: #2a3339;
+    --tree-hover-bg: #232c33;
+    --tree-selected-border: #4b5a63;
+    --control-bg: #2a3238;
+    --control-disabled-text: #74808a;
+    --validation-text: #f28b8b;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --app-bg: #14181b;
+        --panel-bg: #1c2328;
+        --accent: #9fb7c4;
+        --accent-light: #c2d0da;
+        --header-bg: #0f1418;
+        --border-color: #323b42;
+        --highlight: #25323a;
+        --text-color: #e6ebef;
+        --muted-text: #a1acb5;
+        --subtitle-text: #c9d2d9;
+        --header-text: #eef2f5;
+        --header-border: #0b0f12;
+        --panel-header-bg: #222a30;
+        --loading-bar-bg: #2a3339;
+        --tree-hover-bg: #232c33;
+        --tree-selected-border: #4b5a63;
+        --control-bg: #2a3238;
+        --control-disabled-text: #74808a;
+        --validation-text: #f28b8b;
+    }
 }
 
 html,
@@ -17,7 +100,7 @@ body {
     margin: 0;
     font-family: "Segoe UI", "Trebuchet MS", sans-serif;
     background: var(--app-bg);
-    color: #1f2428;
+    color: var(--text-color);
     overflow: hidden;
 }
 
@@ -41,7 +124,7 @@ body {
     width: min(360px, 70vw);
     height: 10px;
     border-radius: 999px;
-    background: #e2ddd2;
+    background: var(--loading-bar-bg);
     overflow: hidden;
     position: relative;
 }
@@ -65,13 +148,19 @@ body {
 }
 
 .app-header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    column-gap: 1.5rem;
     align-items: center;
     padding: 0.75rem 1.5rem;
-    background: var(--accent);
-    color: #f7f5f0;
-    border-bottom: 2px solid #151e22;
+    background: var(--header-bg);
+    color: var(--header-text);
+    border-bottom: 2px solid var(--header-border);
+}
+
+.app-title {
+    justify-self: start;
+    min-width: 0;
 }
 
 .app-title .title {
@@ -81,12 +170,39 @@ body {
 
 .app-title .subtitle {
     font-size: 0.9rem;
-    color: #d7d2c6;
+    color: var(--subtitle-text);
+}
+
+.app-logo {
+    justify-self: center;
+    display: flex;
+    justify-content: center;
 }
 
 .app-status {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
+    justify-self: end;
+    min-width: 0;
+}
+
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.theme-toggle-label {
+    font-size: 0.85rem;
+    color: var(--subtitle-text);
+}
+
+.theme-toggle .form-select {
+    min-width: 8.5rem;
+    background-color: var(--panel-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
 }
 
 .app-body {
@@ -104,7 +220,8 @@ body {
 }
 
 .panel-card .card-header {
-    background: #f9f7f2;
+    background: var(--panel-header-bg);
+    color: var(--text-color);
     font-weight: 600;
     border-bottom: 1px solid var(--border-color);
 }
@@ -116,6 +233,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    color: var(--text-color);
 }
 
 .controls-panel {
@@ -152,18 +270,18 @@ body {
 }
 
 .tree-node-row:hover {
-    background: #f3efe5;
+    background: var(--tree-hover-bg);
     border-color: var(--border-color);
 }
 
 .tree-node-row.selected {
     background: var(--highlight);
-    border-color: #8d9b8f;
+    border-color: var(--tree-selected-border);
 }
 
 .tree-toggle {
     border: none;
-    background: #f0ebe0;
+    background: var(--control-bg);
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 0.4rem;
@@ -175,8 +293,8 @@ body {
 }
 
 .tree-toggle:disabled {
-    background: #f0ebe0;
-    color: #b0a99f;
+    background: var(--control-bg);
+    color: var(--control-disabled-text);
 }
 
 .tree-toggle-placeholder {
@@ -222,7 +340,7 @@ body {
     border-top: 1px solid var(--border-color);
     padding-top: 0.75rem;
     font-size: 0.85rem;
-    color: #8b2c2c;
+    color: var(--validation-text);
 }
 
 .validation-list ul {
@@ -231,7 +349,7 @@ body {
 }
 
 .empty-state {
-    color: #6c757d;
+    color: var(--muted-text);
     font-size: 0.95rem;
 }
 
@@ -281,6 +399,9 @@ body {
     position: relative;
     width: max-content;
     margin: 0 auto;
+    overflow: hidden;
+    border-top-right-radius: 0.85rem;
+    border-top-left-radius: 0.85rem;
 }
 
 .game-tile-image.loading {
@@ -324,7 +445,7 @@ body {
 
 .game-tile-subtitle {
     font-size: 0.8rem;
-    color: #7b756b;
+    color: var(--muted-text);
 }
 
 .game-modal-backdrop {
@@ -357,7 +478,7 @@ body {
     border-top-left-radius: 1rem;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--border-color);
-    background: #f9f7f2;
+    background: var(--panel-header-bg);
 }
 
 .game-modal-body {
@@ -422,6 +543,14 @@ body {
 
 .toast-container .toast.toast-exit {
     animation: toast-out 0.2s ease-in forwards;
+}
+
+.text-muted {
+    color: var(--muted-text) !important;
+}
+
+.form-text {
+    color: var(--text-color);
 }
 
 @keyframes toast-in {
