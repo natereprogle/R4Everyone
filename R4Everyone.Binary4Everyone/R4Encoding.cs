@@ -6,15 +6,19 @@
 public enum R4Encoding
 {
     [EncodingBytes(0xD5, 0x53, 0x41, 0x59)] // GBK
+    // ReSharper disable once InconsistentNaming
     GBK,
 
     [EncodingBytes(0xF5, 0x53, 0x41, 0x59)] // BIG5
+    // ReSharper disable once InconsistentNaming
     BIG5,
 
     [EncodingBytes(0x75, 0x53, 0x41, 0x59)] // SJIS
+    // ReSharper disable once InconsistentNaming
     SJIS,
 
     [EncodingBytes(0x55, 0x73, 0x41, 0x59)] // UTF8
+    // ReSharper disable once InconsistentNaming
     UTF8
 }
 
@@ -35,9 +39,7 @@ public static class R4EncodingHelper
         if (field == null) throw new ArgumentException("Invalid encoding", nameof(encoding));
 
         var attribute = Attribute.GetCustomAttribute(field, typeof(EncodingBytesAttribute));
-        if (attribute == null) throw new InvalidOperationException("EncodingBytesAttribute not found");
-
-        return ((EncodingBytesAttribute)attribute).Bytes;
+        return attribute == null ? throw new InvalidOperationException("EncodingBytesAttribute not found") : ((EncodingBytesAttribute)attribute).Bytes;
     }
 
     public static R4Encoding GetEncoding(byte[] bytes)
