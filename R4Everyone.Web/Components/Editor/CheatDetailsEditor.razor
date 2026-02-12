@@ -1,3 +1,6 @@
+@using System.Text
+@inject IJSRuntime Js
+
 <div class="row g-3">
     <div class="col-12">
         <label class="form-label">Title</label>
@@ -17,9 +20,6 @@
 
 <hr/>
 
-@using System.Text
-@inject IJSRuntime Js
-
 <div class="codes-editor">
     <div class="section-title mb-2">Codes</div>
     <textarea class="form-control code-input @(HasRowErrors ? "is-invalid" : string.Empty)" rows="6"
@@ -34,6 +34,43 @@
             }
         </div>
     }
+</div>
+
+<hr/>
+
+<div class="activator-editor">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="section-title mb-0">Activator</div>
+        <div class="form-check form-switch mb-0">
+            <input class="form-check-input"
+                   type="checkbox"
+                   checked="@(CheatActivatorOptions.XyMode == R4Game.XyActivatorMode.ActionReplay)"
+                   @onchange="OnActionReplayCompatChanged"/>
+            <label class="form-check-label">
+                Action Replay-Compatible
+                <span class="activator-info"
+                      title="Makes the activator compatible with physical action replay cards and some emulators. Only applies if using X/Y. This type of activation code will not display in r4cce. If you are unsure, leave this off">i</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="activator-button-grid">
+        @foreach (var (button, label) in ActivatorButtons)
+        {
+            var state = GetState(button);
+            <button type="button"
+                    class="activator-tile @GetStateCssClass(state)"
+                    @onclick="() => CycleActivatorState(button)"
+                    title="Click to cycle: Ignore -> Hold -> Release">
+                <span class="activator-tile-key">@label</span>
+                <span class="activator-tile-state">@GetStateLabel(state)</span>
+            </button>
+        }
+    </div>
+
+    <div class="activator-legend">
+        Click any button to cycle state: <strong>Ignore</strong> -> <strong>Hold</strong> -> <strong>Release</strong>.
+    </div>
 </div>
 
 @code {
@@ -51,8 +88,25 @@
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
     [Parameter] public EventCallback<string> OnCheatCodeInput { get; set; }
+    [Parameter] public R4Game.CheatActivatorOptions CheatActivatorOptions { get; set; } = new();
+    [Parameter] public EventCallback<R4Game.CheatActivatorOptions> OnCheatActivatorOptionsChanged { get; set; }
 
     private bool HasRowErrors => _rowValidationMessages.Count > 0;
+    private static readonly (R4Game.ActivatorButton Button, string Label)[] ActivatorButtons =
+    [
+        (R4Game.ActivatorButton.L, "L"),
+        (R4Game.ActivatorButton.R, "R"),
+        (R4Game.ActivatorButton.A, "A"),
+        (R4Game.ActivatorButton.B, "B"),
+        (R4Game.ActivatorButton.X, "X"),
+        (R4Game.ActivatorButton.Y, "Y"),
+        (R4Game.ActivatorButton.Up, "Up"),
+        (R4Game.ActivatorButton.Down, "Down"),
+        (R4Game.ActivatorButton.Left, "Left"),
+        (R4Game.ActivatorButton.Right, "Right"),
+        (R4Game.ActivatorButton.Start, "Start"),
+        (R4Game.ActivatorButton.Select, "Select")
+    ];
 
     protected override void OnParametersSet()
     {
@@ -325,4 +379,133 @@
         public int End { get; init; }
     }
 
+    private async Task OnActionReplayCompatChanged(ChangeEventArgs args)
+    {
+        var xyMode = args.Value is bool and true
+            ? R4Game.XyActivatorMode.ActionReplay
+            : R4Game.XyActivatorMode.Standard;
+
+        await OnCheatActivatorOptionsChanged.InvokeAsync(
+            new R4Game.CheatActivatorOptions(CloneStates(), xyMode));
+    }
+
+    private async Task CycleActivatorState(R4Game.ActivatorButton button)
+    {
+        var next = CloneStates();
+        next[button] = next[button] switch
+        {
+            R4Game.ActivatorKeyState.Ignore => R4Game.ActivatorKeyState.Hold,
+            R4Game.ActivatorKeyState.Hold => R4Game.ActivatorKeyState.Release,
+            _ => R4Game.ActivatorKeyState.Ignore
+        };
+
+        await OnCheatActivatorOptionsChanged.InvokeAsync(
+            new R4Game.CheatActivatorOptions(next, CheatActivatorOptions.XyMode));
+    }
+
+    private R4Game.ActivatorKeyState GetState(R4Game.ActivatorButton button)
+    {
+        return CheatActivatorOptions.ButtonStates.TryGetValue(button, out var state)
+            ? state
+            : R4Game.ActivatorKeyState.Ignore;
+    }
+
+    private Dictionary<R4Game.ActivatorButton, R4Game.ActivatorKeyState> CloneStates()
+    {
+        var states = R4Game.CreateDefaultButtonStates();
+        foreach (var (button, state) in CheatActivatorOptions.ButtonStates)
+        {
+            states[button] = state;
+        }
+
+        return states;
+    }
+
+    private static string GetStateLabel(R4Game.ActivatorKeyState state)
+    {
+        return state switch
+        {
+            R4Game.ActivatorKeyState.Hold => "Hold",
+            R4Game.ActivatorKeyState.Release => "Release",
+            _ => "Ignore"
+        };
+    }
+
+    private static string GetStateCssClass(R4Game.ActivatorKeyState state)
+    {
+        return state switch
+        {
+            R4Game.ActivatorKeyState.Hold => "is-hold",
+            R4Game.ActivatorKeyState.Release => "is-release",
+            _ => "is-ignore"
+        };
+    }
 }
+
+<!-- Some CSS tags in here are used via the GetStateCssClass method above, so they display as "unused" but are not -->
+<!--suppress CssUnusedSymbol -->
+<style>
+    .activator-button-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(64px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .activator-tile {
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        background: var(--panel-bg);
+        color: var(--text-color);
+        padding: 0.45rem 0.4rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.12rem;
+        min-height: 56px;
+    }
+
+    .activator-tile-key {
+        font-size: 0.9rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .activator-tile-state {
+        font-size: 0.72rem;
+        line-height: 1;
+    }
+
+    .activator-tile.is-ignore {
+        opacity: 0.7;
+    }
+
+    .activator-tile.is-hold {
+        border-color: #2c7a4b;
+        background: color-mix(in srgb, #2c7a4b 13%, var(--panel-bg));
+    }
+
+    .activator-tile.is-release {
+        border-color: #9c3f3f;
+        background: color-mix(in srgb, #9c3f3f 13%, var(--panel-bg));
+    }
+
+    .activator-legend {
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--muted-text);
+    }
+
+    @@media (max-width: 1200px) {
+        .activator-button-grid {
+            grid-template-columns: repeat(4, minmax(64px, 1fr));
+        }
+    }
+
+    @@media (max-width: 780px) {
+        .activator-button-grid {
+            grid-template-columns: repeat(3, minmax(64px, 1fr));
+        }
+    }
+</style>
+

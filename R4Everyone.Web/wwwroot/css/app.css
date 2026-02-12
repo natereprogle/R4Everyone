@@ -391,6 +391,36 @@ body {
     text-transform: uppercase;
 }
 
+.activator-grid {
+    display: grid;
+    grid-template-columns: minmax(64px, 1fr) repeat(3, 72px);
+    gap: 0.35rem 0.5rem;
+    align-items: center;
+}
+
+.activator-head {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted-text);
+}
+
+.activator-key {
+    font-size: 0.9rem;
+}
+
+.activator-info {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    margin-left: 0.35rem;
+    cursor: help;
+}
+
 .code-row {
     display: grid;
     grid-template-columns: 1fr 1fr auto;

@@ -53,6 +53,7 @@ else
                          Game="_modalGame"
                          MasterCodes="MasterCodes"
                          CheatCodeText="@CheatCodeText"
+                         CheatActivatorOptions="CheatActivatorOptions"
                          OnClose="@CloseGameModal"
                          OnGameIdInput="OnGameIdInput"
                          OnGameTitleInput="OnGameTitleInput"
@@ -66,11 +67,12 @@ else
                          OnCheatTitleInput="OnCheatTitleInput"
                          OnCheatDescriptionInput="OnCheatDescriptionInput"
                          OnCheatEnabledChanged="OnCheatEnabledChanged"
-                         OnCheatCodeInput="OnCheatCodeInput"/>
+                         OnCheatCodeInput="OnCheatCodeInput"
+                         OnCheatActivatorOptionsChanged="OnCheatActivatorOptionsChanged"/>
 
         <ChangelogModal IsOpen="_isChangelogOpen"
                         AppVersion="@_appVersion"
-                        OnClose="CloseChangelog"/>
+                        OnClose="@CloseChangelog"/>
     </div>
 }
 
@@ -91,7 +93,11 @@ else
 
     private string CheatCodeText => Editor.SelectedCheat == null
         ? string.Empty
-        : FormatCheatBlocks(Editor.GetCheatCodeBlocks(Editor.SelectedCheat).Select(ToBigEndianHex));
+        : FormatCheatWords(R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).PayloadWords);
+
+    private R4Game.CheatActivatorOptions CheatActivatorOptions => Editor.SelectedCheat == null
+        ? new R4Game.CheatActivatorOptions()
+        : R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).Options;
 
     protected override void OnInitialized()
     {
@@ -338,9 +344,42 @@ else
             return;
         }
 
-        var blocks = ParseCheatRows(value)
+        var rows = ParseCheatRows(value);
+        if (rows.Any(row => !IsValidHexWord(row)))
+        {
+            Editor.UpdateCheatBlocks(Editor.SelectedCheat, rows.Select(ToLittleEndianHex).ToList());
+            return;
+        }
+
+        var payloadWords = rows
+            .Select(ParseHexWord)
+            .Select(word => word!.Value)
+            .ToList();
+
+        var options = R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).Options;
+        var fullWords = R4Game.BuildCheatCodeWithActivator(payloadWords, options);
+        var blocks = fullWords
+            .Select(word => word.ToString("X8"))
             .Select(ToLittleEndianHex)
             .ToList();
+
+        Editor.UpdateCheatBlocks(Editor.SelectedCheat, blocks);
+    }
+
+    private void OnCheatActivatorOptionsChanged(R4Game.CheatActivatorOptions options)
+    {
+        if (Editor.SelectedCheat == null)
+        {
+            return;
+        }
+
+        var payloadWords = R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).PayloadWords;
+        var fullWords = R4Game.BuildCheatCodeWithActivator(payloadWords, options);
+        var blocks = fullWords
+            .Select(word => word.ToString("X8"))
+            .Select(ToLittleEndianHex)
+            .ToList();
+
         Editor.UpdateCheatBlocks(Editor.SelectedCheat, blocks);
     }
 
@@ -507,9 +546,11 @@ else
         return rows;
     }
 
-    private static string FormatCheatBlocks(IEnumerable<string> blocks)
+    private static string FormatCheatWords(IEnumerable<uint> words)
     {
-        var formattedBlocks = blocks.ToList();
+        var formattedBlocks = words
+            .Select(word => word.ToString("X8"))
+            .ToList();
         if (formattedBlocks.Count == 0)
         {
             return string.Empty;
@@ -568,12 +609,24 @@ else
         return ch is >= '0' and <= '9' || ch is >= 'a' and <= 'f' || ch is >= 'A' and <= 'F';
     }
 
-    private string GetAppVersion()
+    private static uint? ParseHexWord(string value)
+    {
+        return value.Length == 8 && uint.TryParse(value, System.Globalization.NumberStyles.HexNumber, null, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static bool IsValidHexWord(string value)
+    {
+        return value.Length == 8 && value.All(IsHexChar);
+    }
+
+    private static string GetAppVersion()
     {
         var attr = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         if (!string.IsNullOrWhiteSpace(attr?.InformationalVersion))
         {
-            return attr!.InformationalVersion.Split('+')[0];
+            return attr.InformationalVersion.Split('+')[0];
         }
 
         return typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0";
