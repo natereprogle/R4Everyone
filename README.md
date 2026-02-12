@@ -4,6 +4,7 @@ R4Everyone is an open-source, web-based modern alternative to R4 Cheat Code Edit
 were designed to edit usrcheat.dat R4 files.
 
 # Screenshots
+
 ![Main UI](images/R4Everyone%20Main%20Screen.png)
 ![Editor](images/R4Everyone%20Game%20Editor.png)
 
@@ -15,6 +16,8 @@ were designed to edit usrcheat.dat R4 files.
 2. Installable as a PWA, supporting offline use. The installed app is 304 Kb, compared to r4cce's 1.45 MiB (\*Size on
    disk).
 3. Client-side only, no data leaves your device.
+4. Activator support. Activator keys can now be added to Cheat Codes! These allow users to define what keys should be
+   pressed or not pressed for a cheat to run
 
 ## Limitations
 
@@ -26,11 +29,10 @@ were designed to edit usrcheat.dat R4 files.
 ## Planned Features
 
 1. Undo/redo support
-2. Support for adding triggers
-3. Sorting/moving items
-4. Import/export XML
-5. Mobile support (Fully reactive layout)
-6. Confirmation before deleting games or folders that have content or cheats that have been modified from "default"
+2. Sorting/moving items
+3. Import/export XML
+4. Mobile support (Fully reactive layout)
+5. Confirmation before deleting games or folders that have content or cheats that have been modified from "default"
 
 # Why R4Everyone when r4cce works just fine?
 
@@ -69,7 +71,7 @@ due to it actually being a Blazor WebAssembly Standalone app! This means that a 
 2. The app is able to maintain its claim of being fast because it's written in .NET, not JS, and .NET compiled to WASM
    runs at near-native speeds.
 3. The app has been configured as a PWA which means it's also installable on your device, offline.
-4. The app works on Windows, macOS, and Linux. In fact, it works on any device that supports WASM!
+4. The app works on Windows, macOS, and Linux. In fact, it works on any device that has a browser which supports WASM!
 
 ## Are there any downsides?
 
@@ -77,13 +79,30 @@ Yes, the app does have some limitations that r4cce does not.
 
 1. r4cce supports all four possible encoding methods that this app does not. This app defaults to UTF8, r4cce supports
    UTF8, GBK, SJIS, and BIG5. The library _supports_ the other encoding methods, but will use UTF8 regardless.
-2. r4cce supports CycloEvo Cheats and R4/EDGE cheats. This app does not support CycloEvo.
+2. r4cce supports R4, CycloEvo, Edge, and M3Real Cheats databases. This app only supports R4.
 3. r4cce supports importing/exporting XML, this app does not.
 4. r4cce has an "encrypt file" feature, this app does not.
 5. Sorting/moving items is not yet supported.
-6. Adding "triggers" to cheats is not yet supported (You can't set a trigger to enable the cheat if L + R is held, as an
-   example. r4cce allows this.)
 
 If you need support for any of these features, this app may not support those yet. Side note: If you _have_ knowledge of
 the file format for CycloEvo, please let me know! I investigated it at one point but was not able to figure anything out
 about its format.
+
+# Credits
+
+Credit where credit is due! The following websites really helped me in my research:
+
+## Jusrcheat
+
+Jusrcheat was the only documentation I could find regarding the R4 file format online. This project really jump-started
+my research into the R4 file format!
+
+- https://github.com/xperia64/Jusrcheat
+
+## Action Replay info
+
+These sites were very helpful when understanding the Activator logic.
+
+- https://osdl.sourceforge.net/main/documentation/misc/nintendo-DS/homebrew-guide/HomebrewForDS.html
+- http://double.nz/nintendo_ds/nds_develop3.html
+- https://doc.kodewerx.org/hacking_nds.html

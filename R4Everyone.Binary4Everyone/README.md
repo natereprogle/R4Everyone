@@ -77,6 +77,69 @@ await using var output = new MemoryStream();
 await R4CheatDat.SaveAsync(db, output);
 ```
 
+Activator helpers (R4Game)
+```csharp
+using R4Everyone.Binary4Everyone;
+
+var cheat = new R4Cheat
+{
+    Title = "Sample Cheat",
+    Description = "Payload only to start",
+    Enabled = true,
+    Code = new List<byte[]>
+    {
+        // Payload row(s), 4-byte words
+        new byte[] { 0x12, 0x34, 0x56, 0x78 },
+        new byte[] { 0x9A, 0xBC, 0xDE, 0xF0 }
+    }
+};
+
+// Analyze existing code for activator rows and payload split.
+var analysis = R4Game.AnalyzeCheatActivator(cheat);
+var payloadWords = analysis.PayloadWords;
+
+// Build activator options:
+// Hold L + R, Release A, Ignore others.
+var states = R4Game.CreateDefaultButtonStates();
+states[R4Game.ActivatorButton.L] = R4Game.ActivatorKeyState.Hold;
+states[R4Game.ActivatorButton.R] = R4Game.ActivatorKeyState.Hold;
+states[R4Game.ActivatorButton.A] = R4Game.ActivatorKeyState.Release;
+
+var options = new R4Game.CheatActivatorOptions(
+    states,
+    R4Game.XyActivatorMode.Standard // uses 94000136 for X/Y when needed
+);
+
+// Apply activator to the cheat's current payload.
+R4Game.ApplyCheatActivator(cheat, options);
+
+// Preserve current activator while replacing payload.
+R4Game.ReplaceCheatPayloadPreservingActivator(
+    cheat,
+    new List<uint>
+    {
+        0x12345678,
+        0x9ABCDEF0
+    });
+
+// Build words directly if you want explicit control:
+var fullWords = R4Game.BuildCheatCodeWithActivator(payloadWords, options);
+```
+
+Action Replay-compatible X/Y example
+```csharp
+var states = R4Game.CreateDefaultButtonStates();
+states[R4Game.ActivatorButton.X] = R4Game.ActivatorKeyState.Hold;
+states[R4Game.ActivatorButton.Y] = R4Game.ActivatorKeyState.Release;
+
+var actionReplayOptions = new R4Game.CheatActivatorOptions(
+    states,
+    R4Game.XyActivatorMode.ActionReplay // uses 927FFFA8 for X/Y line
+);
+
+R4Game.ApplyCheatActivator(cheat, actionReplayOptions);
+```
+
 Notes
 - Streams must be readable/seekable for load and writable/seekable for save.
 - R4Database implements IAsyncDisposable to flush logging resources; use `await using`

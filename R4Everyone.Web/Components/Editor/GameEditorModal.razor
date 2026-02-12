@@ -60,10 +60,13 @@
                                     <CheatDetailsEditor
                                         Cheat="Editor.SelectedCheat"
                                         CheatCodeText="@CheatCodeText"
+                                        CheatActivatorOptions="CheatActivatorOptions"
+                                        ShowActivatorBanner="ShowActivatorBanner"
                                         OnCheatTitleInput="OnCheatTitleInput"
                                         OnCheatDescriptionInput="OnCheatDescriptionInput"
                                         OnCheatEnabledChanged="OnCheatEnabledChanged"
-                                        OnCheatCodeInput="OnCheatCodeInput"/>
+                                        OnCheatCodeInput="OnCheatCodeInput"
+                                        OnCheatActivatorOptionsChanged="OnCheatActivatorOptionsChanged"/>
                                     break;
                                 case SelectionKind.None:
                                 case SelectionKind.Game:
@@ -89,6 +92,8 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public string[] MasterCodes { get; set; } = [];
     [Parameter] public string CheatCodeText { get; set; } = string.Empty;
+    [Parameter] public R4Game.CheatActivatorOptions CheatActivatorOptions { get; set; } = new();
+    [Parameter] public bool ShowActivatorBanner { get; set; }
 
     [Parameter] public EventCallback<ChangeEventArgs> OnGameIdInput { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnGameTitleInput { get; set; }
@@ -105,6 +110,7 @@
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
     [Parameter] public EventCallback<string> OnCheatCodeInput { get; set; }
+    [Parameter] public EventCallback<R4Game.CheatActivatorOptions> OnCheatActivatorOptionsChanged { get; set; }
 
     private bool CanRemoveFolder => Editor.SelectionKind == SelectionKind.Folder;
     private bool CanRemoveCheat => Editor.SelectionKind == SelectionKind.Cheat;
