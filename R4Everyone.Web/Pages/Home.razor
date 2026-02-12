@@ -54,6 +54,7 @@ else
                          MasterCodes="MasterCodes"
                          CheatCodeText="@CheatCodeText"
                          CheatActivatorOptions="CheatActivatorOptions"
+                         ShowActivatorBanner="ShowActivatorBanner"
                          OnClose="@CloseGameModal"
                          OnGameIdInput="OnGameIdInput"
                          OnGameTitleInput="OnGameTitleInput"
@@ -83,6 +84,8 @@ else
     private bool _isChangelogOpen;
     private bool _changelogChecked;
     private string _appVersion = "1.0.0";
+    private readonly Dictionary<R4Cheat, R4Game.XyActivatorMode> _xyModePreference =
+        new(ReferenceEqualityComparer<R4Cheat>.Instance);
 
     private bool IsGameModalOpen => _isGameModalOpen && _modalGame != null;
 
@@ -93,11 +96,14 @@ else
 
     private string CheatCodeText => Editor.SelectedCheat == null
         ? string.Empty
-        : FormatCheatWords(R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).PayloadWords);
+        : FormatCheatBlocks(Editor.GetCheatCodeBlocks(Editor.SelectedCheat).Select(ToBigEndianHex));
 
     private R4Game.CheatActivatorOptions CheatActivatorOptions => Editor.SelectedCheat == null
         ? new R4Game.CheatActivatorOptions()
-        : R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).Options;
+        : GetEffectiveActivatorOptions(Editor.SelectedCheat);
+
+    private bool ShowActivatorBanner => Editor.SelectedCheat != null &&
+                                        R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).Options.HasActivator;
 
     protected override void OnInitialized()
     {
@@ -351,12 +357,21 @@ else
             return;
         }
 
-        var payloadWords = rows
+        var words = rows
             .Select(ParseHexWord)
             .Select(word => word!.Value)
             .ToList();
 
-        var options = R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).Options;
+        var analysis = R4Game.AnalyzeCheatActivator(words);
+        var options = ResolveOptionsWithPreference(Editor.SelectedCheat, analysis.Options);
+        if (HasXyConstraint(analysis.Options))
+        {
+            _xyModePreference[Editor.SelectedCheat] = analysis.Options.XyMode;
+        }
+
+        var payloadWords = options.HasActivator
+            ? TrimAllTrailingResets(analysis.PayloadWords)
+            : analysis.PayloadWords;
         var fullWords = R4Game.BuildCheatCodeWithActivator(payloadWords, options);
         var blocks = fullWords
             .Select(word => word.ToString("X8"))
@@ -373,7 +388,11 @@ else
             return;
         }
 
-        var payloadWords = R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).PayloadWords;
+        _xyModePreference[Editor.SelectedCheat] = options.XyMode;
+        var analyzed = R4Game.AnalyzeCheatActivator(Editor.SelectedCheat);
+        var payloadWords = options.HasActivator
+            ? TrimAllTrailingResets(analyzed.PayloadWords)
+            : analyzed.PayloadWords;
         var fullWords = R4Game.BuildCheatCodeWithActivator(payloadWords, options);
         var blocks = fullWords
             .Select(word => word.ToString("X8"))
@@ -546,11 +565,9 @@ else
         return rows;
     }
 
-    private static string FormatCheatWords(IEnumerable<uint> words)
+    private static string FormatCheatBlocks(IEnumerable<string> blocks)
     {
-        var formattedBlocks = words
-            .Select(word => word.ToString("X8"))
-            .ToList();
+        var formattedBlocks = blocks.ToList();
         if (formattedBlocks.Count == 0)
         {
             return string.Empty;
@@ -619,6 +636,62 @@ else
     private static bool IsValidHexWord(string value)
     {
         return value.Length == 8 && value.All(IsHexChar);
+    }
+
+    private R4Game.CheatActivatorOptions GetEffectiveActivatorOptions(R4Cheat cheat)
+    {
+        var analyzed = R4Game.AnalyzeCheatActivator(cheat).Options;
+        if (!HasXyConstraint(analyzed)) return ResolveOptionsWithPreference(cheat, analyzed);
+        _xyModePreference[cheat] = analyzed.XyMode;
+        return analyzed;
+
+    }
+
+    private R4Game.CheatActivatorOptions ResolveOptionsWithPreference(
+        R4Cheat cheat,
+        R4Game.CheatActivatorOptions analyzed)
+    {
+        if (HasXyConstraint(analyzed))
+        {
+            return analyzed;
+        }
+
+        var mode = _xyModePreference.TryGetValue(cheat, out var preferredMode)
+            ? preferredMode
+            : analyzed.XyMode;
+
+        return new R4Game.CheatActivatorOptions(CloneStates(analyzed), mode);
+    }
+
+    private static Dictionary<R4Game.ActivatorButton, R4Game.ActivatorKeyState> CloneStates(
+        R4Game.CheatActivatorOptions options)
+    {
+        var states = R4Game.CreateDefaultButtonStates();
+        foreach (var (button, state) in options.ButtonStates)
+        {
+            states[button] = state;
+        }
+
+        return states;
+    }
+
+    private static bool HasXyConstraint(R4Game.CheatActivatorOptions options)
+    {
+        return options.ButtonStates.TryGetValue(R4Game.ActivatorButton.X, out var x) &&
+               x != R4Game.ActivatorKeyState.Ignore
+               || options.ButtonStates.TryGetValue(R4Game.ActivatorButton.Y, out var y) &&
+               y != R4Game.ActivatorKeyState.Ignore;
+    }
+
+    private static IReadOnlyList<uint> TrimAllTrailingResets(IReadOnlyList<uint> words)
+    {
+        var list = words.ToList();
+        while (list is [.., 0xD2000000, 0x00000000])
+        {
+            list.RemoveRange(list.Count - 2, 2);
+        }
+
+        return list;
     }
 
     private static string GetAppVersion()

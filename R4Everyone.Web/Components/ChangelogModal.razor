@@ -11,6 +11,44 @@
             </div>
             <div class="changelog-body">
                 <div class="changelog-section">
+                    <h4>Version 1.2.0</h4>
+                    <div class="changelog-section">
+                        <h6>Editor</h6>
+                        <ul>
+                            <li>Added Cheat Code Activator support. Users may now configure button states to activate
+                                cheats.
+                            </li>
+                            <li>Activator supports an "Action Replay-Compatible" mode, which uses the IPC region's
+                                <code>0x027FFFA8</code> offset for the X and Y buttons. This should almost always be
+                                left
+                                disabled unless users know they need it (Or if a code includes it).
+                            </li>
+                            <li>If a code includes an activator, a banner will be displayed above the Codes section.
+                            </li>
+                            <li>Adding an Activator will append a <code>D2000000 00000000</code> to the end of the code.
+                                This is "standard" for Action Replay cheats, but it <em>does</em>
+                                have the potential to affect codes. If this is a problem for a cheat you use, please
+                                open an issue on GitHub!
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="changelog-section">
+                        <h6><code>R4Everyone.Binary4Everyone</code> Library</h6>
+                        <ul>
+                            <li>Added support for reading and writing <code>Activator</code>s in <code>R4Game</code>.
+                            </li>
+                            <li><code>Activator</code>s are not serialized or deserialized normally. Rather, they are
+                                helper methods for modifying the underlying code.
+                            </li>
+                            <li>When adding <code>Activator</code>s, the library will automatically add
+                                <code>D2000000 00000000</code> to the end of the code. You can avoid this by using
+                                <code>R4Game.BuildCheatCodeWithActivator</code> instead and removing the final two
+                                objects in the Code list.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="changelog-section">
                     <h4>Version 1.1.0</h4>
                     <div class="changelog-section">
                         <h6>General</h6>
@@ -27,29 +65,30 @@
                             </li>
                         </ul>
                     </div>
-                </div>
-                <div class="changelog-section">
-                    <h6>Editor</h6>
-                    <ul>
-                        <li>Master code editor has been redesigned to be 2 rows of 4-byte text fields instead of 8
-                            individual rows.
-                        </li>
-                        <li>Cheat code editor has been completely overhauled to be a single Text Field instead of
-                            multiple "rows" of text fields.
-                        </li>
-                        <li>The cheat code editor will now self-format when typing, and blocks non-hexadecimal
-                            characters from being entered.
-                        </li>
-                    </ul>
-                </div>
-                <div class="changelog-section">
-                    <h6>Notes</h6>
-                    <ul>
-                        <li>This changelog will appear on the first run of the app only, and will not appear again
-                            unless the app is updated.
-                        </li>
-                        <li>Click the logo in the header to view it anytime.</li>
-                    </ul>
+
+                    <div class="changelog-section">
+                        <h6>Editor</h6>
+                        <ul>
+                            <li>Master code editor has been redesigned to be 2 rows of 4-byte text fields instead of 8
+                                individual rows.
+                            </li>
+                            <li>Cheat code editor has been completely overhauled to be a single Text Field instead of
+                                multiple "rows" of text fields.
+                            </li>
+                            <li>The cheat code editor will now self-format when typing, and blocks non-hexadecimal
+                                characters from being entered.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="changelog-section">
+                        <h6>Notes</h6>
+                        <ul>
+                            <li>This changelog will appear on the first run of the app only, and will not appear again
+                                unless the app is updated.
+                            </li>
+                            <li>Click the logo in the header to view it anytime.</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

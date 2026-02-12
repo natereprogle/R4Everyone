@@ -4,6 +4,7 @@ R4Everyone is an open-source, web-based modern alternative to R4 Cheat Code Edit
 were designed to edit usrcheat.dat R4 files.
 
 # Screenshots
+
 ![Main UI](images/R4Everyone%20Main%20Screen.png)
 ![Editor](images/R4Everyone%20Game%20Editor.png)
 
@@ -87,3 +88,22 @@ Yes, the app does have some limitations that r4cce does not.
 If you need support for any of these features, this app may not support those yet. Side note: If you _have_ knowledge of
 the file format for CycloEvo, please let me know! I investigated it at one point but was not able to figure anything out
 about its format.
+
+## Credits
+
+Credit where credit is due! The following websites really helped me in my research:
+
+### Jusrcheat
+
+Jusrcheat was the only documentation I could find regarding the R4 file format online. This project really jump-started
+my research into the R4 file format!
+
+- https://github.com/xperia64/Jusrcheat
+
+### Action Replay info
+
+These sites were very helpful when understanding the Activator logic.
+
+- https://osdl.sourceforge.net/main/documentation/misc/nintendo-DS/homebrew-guide/HomebrewForDS.html
+- http://double.nz/nintendo_ds/nds_develop3.html
+- https://doc.kodewerx.org/hacking_nds.html

@@ -22,6 +22,12 @@
 
 <div class="codes-editor">
     <div class="section-title mb-2">Codes</div>
+    @if (ShowActivatorBanner)
+    {
+        <div class="activator-notice mb-2">
+            This cheat uses an activator! You can edit it here in Codes or with the activator buttons below.
+        </div>
+    }
     <textarea class="form-control code-input @(HasRowErrors ? "is-invalid" : string.Empty)" rows="6"
               value="@_localCheatCodeText" @oninput="HandleCheatCodeInput" spellcheck="false"
               @ref="_cheatCodeInput"></textarea>
@@ -40,7 +46,12 @@
 
 <div class="activator-editor">
     <div class="d-flex align-items-center justify-content-between mb-2">
-        <div class="section-title mb-0">Activator</div>
+        <div>
+            <div class="section-title mb-0">Activator</div>
+            <div class="activator-subtitle">
+                Requires buttons to be held or released for the cheat to run. The state of buttons marked as "Ignore" will not affect activation of the cheat.
+            </div>
+        </div>
         <div class="form-check form-switch mb-0">
             <input class="form-check-input"
                    type="checkbox"
@@ -49,7 +60,7 @@
             <label class="form-check-label">
                 Action Replay-Compatible
                 <span class="activator-info"
-                      title="Makes the activator compatible with physical action replay cards and some emulators. Only applies if using X/Y. This type of activation code will not display in r4cce. If you are unsure, leave this off">i</span>
+                      title="Makes the activator compatible with physical action replay cards and some emulators. Only applies if using X/Y. If you are unsure, leave this off">i</span>
             </label>
         </div>
     </div>
@@ -89,9 +100,11 @@
     [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
     [Parameter] public EventCallback<string> OnCheatCodeInput { get; set; }
     [Parameter] public R4Game.CheatActivatorOptions CheatActivatorOptions { get; set; } = new();
+    [Parameter] public bool ShowActivatorBanner { get; set; }
     [Parameter] public EventCallback<R4Game.CheatActivatorOptions> OnCheatActivatorOptionsChanged { get; set; }
 
     private bool HasRowErrors => _rowValidationMessages.Count > 0;
+
     private static readonly (R4Game.ActivatorButton Button, string Label)[] ActivatorButtons =
     [
         (R4Game.ActivatorButton.L, "L"),
@@ -147,6 +160,7 @@
         raw = NormalizeLineEndings(raw, ref caretStart, ref caretEnd);
 
         var formatted = FormatCheatText(raw, caretStart, caretEnd, out var newStart, out var newEnd);
+
         _localCheatCodeText = formatted;
         _pendingSelection = true;
         _pendingSelectionStart = newStart;
@@ -445,6 +459,15 @@
 <!-- Some CSS tags in here are used via the GetStateCssClass method above, so they display as "unused" but are not -->
 <!--suppress CssUnusedSymbol -->
 <style>
+    .activator-notice {
+        font-size: 0.85rem;
+        border: 1px solid var(--border-color);
+        background: var(--highlight);
+        border-radius: 0.4rem;
+        padding: 0.4rem 0.55rem;
+        color: var(--text-color);
+    }
+
     .activator-button-grid {
         display: grid;
         grid-template-columns: repeat(6, minmax(64px, 1fr));
@@ -496,6 +519,14 @@
         color: var(--muted-text);
     }
 
+    .activator-subtitle {
+        margin-top: 0.2rem;
+        font-size: 0.82rem;
+        color: var(--muted-text);
+        max-width: 40rem;
+        line-height: 1.25;
+    }
+
     @@media (max-width: 1200px) {
         .activator-button-grid {
             grid-template-columns: repeat(4, minmax(64px, 1fr));
@@ -508,4 +539,3 @@
         }
     }
 </style>
-

@@ -202,11 +202,9 @@ public sealed class R4Game(string id) : IR4Container
         }
 
         result.AddRange(payloadWords);
-        if (hasActivatorRows)
-        {
-            result.Add(0xD2000000);
-            result.Add(0x00000000);
-        }
+        if (!hasActivatorRows) return result;
+        result.Add(0xD2000000);
+        result.Add(0x00000000);
 
         return result;
     }
