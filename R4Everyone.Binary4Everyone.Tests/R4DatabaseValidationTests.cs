@@ -37,10 +37,28 @@ public class R4DatabaseValidationTests
     {
         var header = new byte[0x100];
         "R4 CheatCode"u8.ToArray().CopyTo(header, 0);
+        // A marker that matches none of the known encoding signatures.
+        header[0x4C] = 0xFF;
+        header[0x4D] = 0xFF;
+        header[0x4E] = 0xFF;
+        header[0x4F] = 0xFF;
 
         await using var stream = new MemoryStream(header);
 
         await Assert.ThrowsAsync<FileLoadException>(() => R4Database.ValidateDatabaseAsync(stream));
+    }
+
+    [Fact]
+    public async Task ValidateDatabaseAsync_AllowsZeroedEncodingMarker()
+    {
+        // Real-world R4 databases may leave the encoding marker zeroed; these
+        // must still be accepted (mapped to R4Encoding.Default).
+        var header = new byte[0x100];
+        "R4 CheatCode"u8.ToArray().CopyTo(header, 0);
+
+        await using var stream = new MemoryStream(header);
+
+        await R4Database.ValidateDatabaseAsync(stream);
     }
 
     [Fact]
