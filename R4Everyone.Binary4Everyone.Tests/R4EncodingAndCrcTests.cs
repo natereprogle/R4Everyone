@@ -19,9 +19,17 @@ public class R4EncodingAndCrcTests
     }
 
     [Fact]
-    public void GetEncoding_ThrowsForUnknownByteSequence()
+    public void GetEncoding_MapsZeroedMarkerToUtf8()
     {
         var bytes = "\0\0\0\0"u8.ToArray();
+
+        Assert.Equal(R4Encoding.UTF8, R4EncodingHelper.GetEncoding(bytes));
+    }
+
+    [Fact]
+    public void GetEncoding_ThrowsForUnknownByteSequence()
+    {
+        var bytes = new byte[] { 0xFF, 0xFF, 0xFF, 0xFF };
 
         Assert.Throws<ArgumentException>(() => R4EncodingHelper.GetEncoding(bytes));
     }
