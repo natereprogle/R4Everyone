@@ -9,7 +9,6 @@ public class R4EncodingAndCrcTests
     [InlineData(R4Encoding.BIG5)]
     [InlineData(R4Encoding.SJIS)]
     [InlineData(R4Encoding.UTF8)]
-    [InlineData(R4Encoding.Default)]
     public void GetEncoding_RoundTripsKnownEncodings(R4Encoding encoding)
     {
         var bytes = R4EncodingHelper.GetBytes(encoding);
@@ -20,11 +19,11 @@ public class R4EncodingAndCrcTests
     }
 
     [Fact]
-    public void GetEncoding_MapsZeroedMarkerToDefault()
+    public void GetEncoding_MapsZeroedMarkerToUtf8()
     {
         var bytes = "\0\0\0\0"u8.ToArray();
 
-        Assert.Equal(R4Encoding.Default, R4EncodingHelper.GetEncoding(bytes));
+        Assert.Equal(R4Encoding.UTF8, R4EncodingHelper.GetEncoding(bytes));
     }
 
     [Fact]

@@ -52,7 +52,7 @@ public class R4DatabaseValidationTests
     public async Task ValidateDatabaseAsync_AllowsZeroedEncodingMarker()
     {
         // Real-world R4 databases may leave the encoding marker zeroed; these
-        // must still be accepted (mapped to R4Encoding.Default).
+        // must still be accepted (loaded as UTF8).
         var header = new byte[0x100];
         "R4 CheatCode"u8.ToArray().CopyTo(header, 0);
 

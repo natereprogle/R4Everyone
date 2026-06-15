@@ -19,14 +19,7 @@ public enum R4Encoding
 
     [EncodingBytes(0x55, 0x73, 0x41, 0x59)] // UTF8
     // ReSharper disable once InconsistentNaming
-    UTF8,
-
-    // Some real-world R4 databases leave the encoding marker zeroed instead of
-    // writing one of the signatures above. We accept the all-zero marker rather
-    // than rejecting an otherwise-valid file, and write it back unchanged on
-    // save. Text is currently decoded as UTF-8 (see R4Binary.CurrentEncoding).
-    [EncodingBytes(0x00, 0x00, 0x00, 0x00)]
-    Default
+    UTF8
 }
 
 [AttributeUsage(AttributeTargets.Field)]
@@ -51,6 +44,13 @@ public static class R4EncodingHelper
 
     public static R4Encoding GetEncoding(byte[] bytes)
     {
+        // Some real-world R4 databases leave the encoding marker zeroed instead of
+        // writing one of the four known signatures. Treat an all-zero marker as
+        // UTF8 (the standard) so these files load; saving normalizes the marker to
+        // the proper UTF8 signature rather than preserving the zeros.
+        if (bytes.Length == 4 && bytes.All(b => b == 0))
+            return R4Encoding.UTF8;
+
         foreach (var encoding in Enum.GetValues<R4Encoding>())
         {
             var encodingBytes = GetBytes(encoding);

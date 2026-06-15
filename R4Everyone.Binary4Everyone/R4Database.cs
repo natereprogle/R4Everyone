@@ -108,9 +108,15 @@ public sealed class R4Database : IAsyncDisposable
         // two bytes, and we could even validate just on the first byte, but we're being extra safe here.
         // This is checking that at least one of the encoding methods matches the bytes at these locations and, if so,
         // returns that value so we can set the file encoding
-        var isValidEncoding = Enum.GetValues<R4Encoding>().Select(R4EncodingHelper.GetBytes)
-            .Any(bytes => bytes[0] == header[0x4C] && bytes[1] == header[0x4D] && bytes[2] == header[0x4E] &&
-                          bytes[3] == header[0x4F]);
+        var marker = new[] { header[0x4C], header[0x4D], header[0x4E], header[0x4F] };
+
+        // Some real-world R4 databases leave the encoding marker zeroed. Accept these rather than rejecting an
+        // otherwise-valid file; they are loaded as UTF8 and the marker is normalized to the UTF8 signature on save.
+        var isZeroedMarker = marker.All(b => b == 0);
+
+        var isValidEncoding = isZeroedMarker || Enum.GetValues<R4Encoding>().Select(R4EncodingHelper.GetBytes)
+            .Any(bytes => bytes[0] == marker[0] && bytes[1] == marker[1] && bytes[2] == marker[2] &&
+                          bytes[3] == marker[3]);
 
         // We've already passed the last check, so we just need to return its value since we know everything was true up to this point
         if (!isValidEncoding)
