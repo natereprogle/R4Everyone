@@ -44,6 +44,13 @@ public static class R4EncodingHelper
 
     public static R4Encoding GetEncoding(byte[] bytes)
     {
+        // Some real-world R4 databases leave the encoding marker zeroed instead of
+        // writing one of the four known signatures. Treat an all-zero marker as
+        // UTF8 (the standard) so these files load; saving normalizes the marker to
+        // the proper UTF8 signature rather than preserving the zeros.
+        if (bytes.Length == 4 && bytes.All(b => b == 0))
+            return R4Encoding.UTF8;
+
         foreach (var encoding in Enum.GetValues<R4Encoding>())
         {
             var encodingBytes = GetBytes(encoding);
