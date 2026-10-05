@@ -4,3 +4,16 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .vs/
+
+# Local user/IDE files
+*.csproj.user
+*.suo
+
+
+# Local melonDS XML exporter test data / generated output
+R4XmlDump/usrcheat.dat
+R4XmlDump/r4_dump.xml
+R4XmlDump/*.dat
+R4XmlDump/*_dump.xml
+R4XmlDump/test-output/
+R4XmlDump/exports/
