@@ -19,7 +19,7 @@ public partial class EditorState
 
     public void NewFile()
     {
-        OpenDatabase(new R4Database(), NewFileName);
+        OpenDatabase(CreateEmptyDatabase(), NewFileName);
     }
 
     /// <summary>
@@ -111,6 +111,10 @@ public partial class EditorState
         NotifyStateChanged();
     }
 
+    // R4Database defaults to the GBK marker (the first R4Encoding value), but text is always written as UTF-8, so
+    // new files must say UTF-8 for non-ASCII titles to display correctly on the cart.
+    private static R4Database CreateEmptyDatabase() => new() { FileEncoding = R4Encoding.UTF8 };
+
     private void ResetCaches()
     {
         _masterCodeText.Clear();
@@ -129,7 +133,7 @@ public partial class EditorState
             return Database;
         }
 
-        Database = new R4Database();
+        Database = CreateEmptyDatabase();
         HasLoadedFile = true;
         LoadedFileName = NewFileName;
         return Database;
