@@ -11,7 +11,31 @@
             </div>
             <div class="changelog-body">
                 <div class="changelog-section">
-                    <h4>Version 1.3.0</h4>
+                    <h4>Version 2.0.0</h4>
+                    <div class="changelog-section">
+                        <h6>New Features</h6>
+                        <ul>
+                            <li><strong>Undo and redo.</strong> Use the Undo and Redo buttons (also in the game
+                                editor), or press <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo and <kbd>Ctrl</kbd>+<kbd>Y</kbd>
+                                or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> to redo (<kbd>Cmd</kbd> on macOS).
+                                Typing in one field counts as a single step, and the last 100 steps are kept. Undoing
+                                back to your last save clears the "Unsaved changes" badge.
+                            </li>
+                            <li><strong>Moving and sorting.</strong> Move folders and cheats up or down, move a cheat
+                                into another folder or back to the top level, and sort a folder or the top level A–Z
+                                (folders first). Games can be sorted A–Z too.
+                            </li>
+                            <li><strong>XML import and export.</strong> Export the open file as codelist XML, the
+                                format used by melonDS-style tools, or import one. Exports also include enabled states,
+                                One Hot, and master codes, so they import back into R4Everyone without losing anything.
+                                Importing replaces the open file, and duplicate games in the XML are merged.
+                            </li>
+                            <li><strong>Confirmations.</strong> R4Everyone now asks before removing a game, a cheat, or
+                                a folder that has content (empty folders are removed straight away), and before New,
+                                Open, or Import discards unsaved changes.
+                            </li>
+                        </ul>
+                    </div>
                     <div class="changelog-section">
                         <h6>General</h6>
                         <ul>
