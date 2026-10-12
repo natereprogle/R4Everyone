@@ -42,9 +42,3 @@ This policy is not anti-AI. Maintainers use AI tools in their own work on
 R4Everyone, and you're welcome to use them too, as long as you follow the
 rules above. The problem isn't the tools; it's unreviewed work submitted by
 people who don't understand it.
-
----
-
-This policy is adapted from the
-[Ghostty AI Usage Policy](https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md)
-(MIT License).
