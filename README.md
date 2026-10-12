@@ -3,11 +3,6 @@
 R4Everyone is an open-source, web-based modern alternative to R4 Cheat Code Editor, known as r4cce. Both applications
 were designed to edit usrcheat.dat R4 files.
 
-# Screenshots
-
-![Main UI](images/R4Everyone%20Main%20Screen.png)
-![Editor](images/R4Everyone%20Game%20Editor.png)
-
 # Features & Limitations
 
 ## Features
@@ -29,24 +24,24 @@ were designed to edit usrcheat.dat R4 files.
 
 ## Limitations
 
-1. Not all r4cce features have been implemented.
+1. Not all r4cce features have been implemented ([see below](#are-there-any-downsides))
 
 # Why R4Everyone when r4cce works just fine?
 
-R4cce works just fine for Windows users only. But with the prevalence of mobile emulators (Delta), handheld gaming PCs
-(Steam Deck), and other non-Windows devices, plus the fact that r4cce isn't available anymore through official channels,
-an alternative was necessary.
+R4cce works just fine, but only for Desktop and only on Windows (disregarding tools like Wine and Proton). 
+But with the prevalence of mobile emulators (Delta), handheld gaming PCs (Steam Deck), and other non-Windows devices, 
+plus the fact that r4cce isn't available anymore through official channels, an alternative was necessary.
 
 R4cce was last updated nearly two decades ago (2009) and, from what I can tell, is no longer maintained. R4cce was
 hosted on the author's website and, as of today, 2026-02-07, that site is down. DNS seems to resolve, but the site
 times out. I cannot find any copies of the software online, either (which wouldn't have been allowed anyway due to the
-licensing). They all go to dead .co.jp domains. Archive.org does have the website archived, and that's the only place I
+licensing). They all go to dead `.co.jp` domains. Archive.org does have the website archived, and that's the only place I
 can find to get it safely.
 
 As well, r4cce was closed-source, and **very** slow (At least, in my testing). Loading a 50MB (Yes, 50 ***MB***) file
-with r4cce on my Ryzen 9 5900X took anywhere from 1 to 5 minutes, and sometimes would bring my computer to a halt while
-doing so. Normal user operations are pretty fast, and most users will not experience these limitations when editing
-normal files (read: kilobytes in size), but r4cce struggles with larger files.
+(the DeadSkullzJr DB) with r4cce on my Ryzen 9 5900X took anywhere from 1 to 5 minutes, and sometimes would bring my 
+computer to a halt while doing so. Normal user operations are pretty fast, and most users will not experience these 
+limitations when editing normal files (read: kilobytes in size), but r4cce struggles with larger files.
 
 R4Everyone is intended to fix these issues. It's designed to be extremely fast, thanks to my library,
 `R4Everyone.Binary4Everyone`.
@@ -62,13 +57,22 @@ will be uploaded at a later date, but I already have
 ## A "fast" web app? Suuuuuure.
 
 I get it, JS typically sucks when it comes to "being fast." HOWEVER, R4Everyone _does_ manage to be MUCH faster than JS,
-due to it actually being a Blazor WebAssembly Standalone app! This means that a couple of things:
+due to it actually being WebAssembly (specifically, Blazor WebAssembly Standalone)! This means that a couple of things:
 
 1. The app is 100% client-side. It does not communicate with a server, and therefore no data ever leaves your device.
 2. The app is able to maintain its claim of being fast because it's written in .NET, not JS, and .NET compiled to WASM
    runs at near-native speeds.
 3. The app has been configured as a PWA which means it's also installable on your device, offline.
 4. The app works on Windows, macOS, and Linux. In fact, it works on any device that has a browser which supports WASM!
+
+For reference, the DeadSkullzJr file that takes my Ryzen 9 5900X _minutes_ to open in r4cce only takes about 1-2 seconds 
+using R4Everyone. And that's in the browser compared to a native desktop app. The speed gain is astronomical.
+
+> [!NOTE]
+> The DeadSkullzJr database is a worst-case scenario. There is no world in which anyone would realistically be editing this
+> file. It doesn't follow the standard format, and its size requires quite a bit of memory and processing power to open/edit.
+> Memory-starved devices such as phones and low-end PCs will struggle with files of this size. For reference, my iPhone 17
+> Pro Max completely locked up when opening it. Just because it can doesn't mean it should 😉
 
 ## Are there any downsides?
 
@@ -77,13 +81,22 @@ Yes, the app does have some limitations that r4cce does not.
 1. r4cce supports all four possible encoding methods that this app does not. This app defaults to UTF8, r4cce supports
    UTF8, GBK, SJIS, and BIG5. The library _supports_ the other encoding methods, but will use UTF8 regardless.
 2. r4cce supports R4, CycloEvo, Edge, and M3Real Cheats databases. This app only supports R4.
-3. r4cce supports importing/exporting XML, this app does not.
-4. r4cce has an "encrypt file" feature, this app does not.
-5. Sorting/moving items is not yet supported.
+3. r4cce has an "encrypt file" feature, this app does not.
 
-If you need support for any of these features, this app may not support those yet. Side note: If you _have_ knowledge of
-the file format for CycloEvo, please let me know! I investigated it at one point but was not able to figure anything out
-about its format.
+If you need support for any of these features, this app may not support those yet.
+
+> [!NOTE]
+> If you _have_ knowledge of the file format for CycloEvo, Edge, and/or M3Real, please let me know! I investigated it at
+> one point but was not able to find out anything out about its format. Formats like CycloEvo seem to use a custom encoding
+> algorithm, and changing one small thing scrambles the entire file, so I can't figure out what's what. If I wanted to
+> investigate further, I'd need to reverse-engineer r4cce, itself.
+
+# Screenshots
+
+![Main UI](images/R4Everyone%20Main%20Screen.png)
+![Editor](images/R4Everyone%20Game%20Editor.png)
+![Light Mode](images/R4Everyone%20Light%20Mode.png)
+<img src="images/R4Everyone%20Mobile.png" width="400" />
 
 # Credits
 
