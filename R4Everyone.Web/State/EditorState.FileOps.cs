@@ -117,6 +117,8 @@ public partial class EditorState
         _cheatCodeWords.Clear();
         _xyModePreference.Clear();
         _expandedState.Clear();
+        _nodeIds.Clear();
+        _nodesById.Clear();
         _validationErrors = [];
     }
 

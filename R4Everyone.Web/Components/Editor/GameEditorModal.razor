@@ -35,16 +35,6 @@
                                 <button type="button" class="btn btn-success" @onclick="AddFolder">Add Folder</button>
                                 <button type="button" class="btn btn-success" @onclick="AddCheat">Add Cheat</button>
                             </div>
-                            <div class="button-pair">
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        @onclick="() => Editor.MoveSelected(-1)" disabled="@(!Editor.CanMoveSelected(-1))"
-                                        title="Move the selected folder or cheat up">Move Up
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        @onclick="() => Editor.MoveSelected(1)" disabled="@(!Editor.CanMoveSelected(1))"
-                                        title="Move the selected folder or cheat down">Move Down
-                                </button>
-                            </div>
                             @if (Editor.SelectionKind == SelectionKind.Cheat && MoveTargets.Count > 0)
                             {
                                 @* Re-created after each move so it shows the placeholder again. *@
@@ -64,6 +54,9 @@
                                     disabled="@(Editor.SelectedItem == null)">@RemoveItemLabel
                             </button>
                             <button type="button" class="btn btn-danger" @onclick="RemoveGameAsync">Remove Game</button>
+                        </div>
+                        <div class="form-text mb-0">
+                            Drag the grip to reorder, or drop a cheat on a folder to move it inside.
                         </div>
                         <GameScopedTreeView Game="Game"/>
                     </div>

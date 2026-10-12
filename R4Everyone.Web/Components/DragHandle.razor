@@ -1,0 +1,21 @@
+@* Grip that starts a drag (see wwwroot/js/drag-drop.js). With keyboard focus, the arrow keys move the item. *@
+<button type="button" class="drag-handle @Class" data-drag-handle aria-label="@($"Move {Label}. Drag, or use the arrow keys.")"
+        title="Drag to move" @onclick:stopPropagation="true">
+    <svg viewBox="0 0 10 16" aria-hidden="true" focusable="false">
+        <circle cx="2.5" cy="3" r="1.4"/>
+        <circle cx="7.5" cy="3" r="1.4"/>
+        <circle cx="2.5" cy="8" r="1.4"/>
+        <circle cx="7.5" cy="8" r="1.4"/>
+        <circle cx="2.5" cy="13" r="1.4"/>
+        <circle cx="7.5" cy="13" r="1.4"/>
+    </svg>
+</button>
+
+@code {
+    /// <summary>
+    /// What is being moved, for screen readers, for example a cheat's title.
+    /// </summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    [Parameter] public string? Class { get; set; }
+}

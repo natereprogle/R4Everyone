@@ -78,12 +78,20 @@ public sealed class EditorCommands(EditorState editor, ConfirmService confirm, T
             "Discard changes"));
     }
 
-    public void MoveSelectedCheat(R4Folder? destination)
+    public void MoveSelectedCheat(R4Folder? destination) => ReportMove(editor.MoveSelectedCheat(destination));
+
+    public void MoveItem(R4Game game, IR4Item item, IR4Item target, DropPosition position) =>
+        ReportMove(editor.MoveItem(game, item, target, position));
+
+    public void MoveItemBy(R4Game game, IR4Item item, int offset) =>
+        ReportMove(editor.MoveItemBy(game, item, offset));
+
+    private void ReportMove(MoveResult result)
     {
-        if (editor.MoveSelectedCheat(destination))
+        if (result == MoveResult.MovedAndDisabled)
         {
             toasts.ShowWarning(
-                $"'{DisplayName(destination!)}' is a One Hot folder that already has an enabled cheat, so the moved cheat was disabled.");
+                "The cheat was disabled because the One Hot folder it moved into already has an enabled cheat.");
         }
     }
 

@@ -506,17 +506,32 @@ body {
 }
 
 .game-tile {
+    position: relative;
     border: 1px solid var(--border-color);
     background: var(--panel-bg);
     border-radius: 0.85rem;
-    text-align: left;
-    padding: 0;
+    width: 100%;
+    align-self: start;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* The part of a tile that opens the game editor. */
+.game-tile-open {
     display: flex;
     flex-direction: column;
     width: 100%;
-    align-self: start;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: inherit;
+    text-align: left;
     cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-tile-open:focus-visible {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
 }
 
 @media (hover: hover) {
@@ -568,6 +583,97 @@ body {
     inset: 0;
     background: linear-gradient(90deg, transparent, rgba(31, 42, 48, 0.6), transparent);
     animation: game-load 1.2s ease-in-out infinite;
+}
+
+/* Drag-and-drop (see js/drag-drop.js). */
+.drag-handle {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: var(--muted-text);
+    cursor: grab;
+    touch-action: none;
+}
+
+.drag-handle:hover,
+.drag-handle:focus-visible {
+    background: var(--control-bg);
+    color: var(--text-color);
+}
+
+.drag-handle svg {
+    width: 0.65rem;
+    height: 1rem;
+    fill: currentColor;
+}
+
+.game-drag-handle {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    width: 2rem;
+    height: 2rem;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 6px rgba(31, 42, 48, 0.15);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.game-tile:hover .game-drag-handle,
+.game-tile:focus-within .game-drag-handle {
+    opacity: 1;
+}
+
+.is-drag-active,
+.is-drag-active * {
+    cursor: grabbing !important;
+    user-select: none;
+}
+
+.is-dragging {
+    opacity: 0.35;
+}
+
+.drag-ghost {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2000;
+    margin: 0;
+    pointer-events: none;
+    opacity: 0.92;
+    background: var(--panel-bg);
+    border-radius: 0.5rem;
+    box-shadow: var(--toast-shadow);
+}
+
+.tree-node-row.drop-before {
+    box-shadow: inset 0 3px 0 var(--accent-light);
+}
+
+.tree-node-row.drop-after {
+    box-shadow: inset 0 -3px 0 var(--accent-light);
+}
+
+.tree-node-row.drop-inside {
+    background: var(--highlight);
+    border-color: var(--accent-light);
+}
+
+.game-tile.drop-before {
+    box-shadow: -5px 0 0 var(--accent-light);
+}
+
+.game-tile.drop-after {
+    box-shadow: 5px 0 0 var(--accent-light);
 }
 
 .game-tile-placeholder {
@@ -1276,8 +1382,19 @@ body {
     }
 }
 
-/* Touch screens: larger tap targets. */
+/* Touch screens: larger tap targets, and tile grips always visible since there is no hover. */
 @media (pointer: coarse) {
+    .drag-handle {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .game-drag-handle {
+        width: 2.25rem;
+        height: 2.25rem;
+        opacity: 0.9;
+    }
+
     .tree-node-row {
         padding: 0.5rem;
     }

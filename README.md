@@ -21,7 +21,8 @@ were designed to edit usrcheat.dat R4 files.
 5. Works on phones, tablets, and desktops. The layout adapts to your screen size, and on phones the game editor opens
    full-screen with tabs for cheats, game details, and the selected item.
 6. Undo and redo, with buttons and keyboard shortcuts (Ctrl+Z, and Ctrl+Y or Ctrl+Shift+Z).
-7. Move folders and cheats up and down or into other folders, and sort folders, cheats, and games A–Z.
+7. Drag and drop to reorder games, folders, and cheats, or to move a cheat into a folder. Works with a mouse, touch,
+   or the keyboard. Folders, cheats, and games can also be sorted A–Z.
 8. Import and export codelist XML, the format used by melonDS-style tools. Exports also keep enabled states, One Hot,
    and master codes, so they round-trip without loss.
 9. Confirmation before removing games, cheats, or folders with content, and before discarding unsaved changes.

@@ -1,7 +1,11 @@
 @inject EditorState Editor
 
 <div class="tree-node-row @(IsSelected ? "selected" : "")" style="padding-left: @(Level * 16)px" @onclick="HandleSelect"
-     @onclick:stopPropagation="true">
+     @onclick:stopPropagation="true"
+     data-drag-id="@NodeId" data-drop-id="@NodeId" data-drag-kind="@(IsFolder ? "folder" : "cheat")"
+     data-drag-parent="@Editor.GetNodeId(Container)" data-level="@Level"
+     data-has-children="@(IsExpanded && Folder!.Items.Count > 0 ? "true" : "false")">
+    <DragHandle Label="@DisplayName"/>
     <button class="tree-toggle" disabled="@(!IsFolder)" @onclick="HandleToggle" @onclick:stopPropagation="true">
         @if (IsFolder)
         {
@@ -23,10 +27,10 @@
         switch (item)
         {
             case R4Folder nestedFolder:
-                <TreeNode Game="Game" Folder="nestedFolder" Level="@(Level + 1)"/>
+                <TreeNode @key="item" Game="Game" Container="folder" Folder="nestedFolder" Level="@(Level + 1)"/>
                 break;
             case R4Cheat cheat:
-                <TreeNode Game="Game" Folder="folder" Cheat="cheat" Level="@(Level + 1)"/>
+                <TreeNode @key="item" Game="Game" Container="folder" Folder="folder" Cheat="cheat" Level="@(Level + 1)"/>
                 break;
         }
     }
@@ -39,12 +43,18 @@
     /// </summary>
     [Parameter, EditorRequired] public R4Game Game { get; set; } = null!;
 
+    /// <summary>
+    /// The game or folder whose list contains this node.
+    /// </summary>
+    [Parameter, EditorRequired] public object Container { get; set; } = null!;
+
     [Parameter] public R4Folder? Folder { get; set; }
     [Parameter] public R4Cheat? Cheat { get; set; }
     [Parameter] public int Level { get; set; }
 
     // A cheat node also carries its parent folder, so the node type must come from Cheat, not Folder.
     private bool IsFolder => Cheat == null;
+    private int NodeId => Editor.GetNodeId(IsFolder ? Folder! : Cheat!);
     private bool IsExpanded => IsFolder && Folder != null && Editor.IsExpanded(Folder);
 
     private bool IsSelected => IsFolder

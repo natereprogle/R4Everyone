@@ -1,9 +1,10 @@
 @implements IAsyncDisposable
 @inject CoverArtService CoverArt
+@inject EditorState Editor
 @inject IJSRuntime Js
 @inject ILogger<GameGridView> Logger
 
-<div class="game-grid">
+<div class="game-grid" @ref="_grid">
     @if (Games.Count == 0)
     {
         <div class="empty-state">No games yet. Create or open a file to begin.</div>
@@ -16,36 +17,40 @@
             var gameId = game.GameId;
             var cover = GetCover(gameId);
             var isLoading = cover is { IsLoading: true };
-            <button type="button" class="game-tile" data-game-id="@gameId"
-                    @onclick="() => OnGameSelected.InvokeAsync(game)">
-                <div class="game-image-frame">
-                    @if (cover is { HasError: true })
-                    {
-                        <img class="game-tile-image" src="@FailedCoverPath" alt="@title"/>
-                    }
-                    else if (!string.IsNullOrEmpty(cover?.Url))
-                    {
-                        <img class="game-tile-image @(isLoading ? "loading" : "")" src="@cover.Url" alt="@title"
-                             @onload="() => OnImageLoaded(cover)" @onerror="() => OnImageError(cover)"/>
-                    }
-                    else
-                    {
-                        <img class="game-tile-image @(isLoading ? "loading" : "")" src="@UnknownCoverPath"
-                             alt="Unknown cover art"/>
-                    }
-                    @if (isLoading)
-                    {
-                        <div class="game-image-loading-bar"></div>
-                    }
-                </div>
-                <div class="game-tile-body">
-                    <div class="game-tile-title">@title</div>
-                    @if (!string.IsNullOrWhiteSpace(gameId))
-                    {
-                        <div class="game-tile-subtitle">@gameId</div>
-                    }
-                </div>
-            </button>
+            var nodeId = Editor.GetNodeId(game);
+            <div @key="game" class="game-tile" data-game-id="@gameId" data-drag-id="@nodeId" data-drop-id="@nodeId"
+                 data-drag-kind="game">
+                <button type="button" class="game-tile-open" @onclick="() => OnGameSelected.InvokeAsync(game)">
+                    <div class="game-image-frame">
+                        @if (cover is { HasError: true })
+                        {
+                            <img class="game-tile-image" src="@FailedCoverPath" alt="@title"/>
+                        }
+                        else if (!string.IsNullOrEmpty(cover?.Url))
+                        {
+                            <img class="game-tile-image @(isLoading ? "loading" : "")" src="@cover.Url" alt="@title"
+                                 @onload="() => OnImageLoaded(cover)" @onerror="() => OnImageError(cover)"/>
+                        }
+                        else
+                        {
+                            <img class="game-tile-image @(isLoading ? "loading" : "")" src="@UnknownCoverPath"
+                                 alt="Unknown cover art"/>
+                        }
+                        @if (isLoading)
+                        {
+                            <div class="game-image-loading-bar"></div>
+                        }
+                    </div>
+                    <div class="game-tile-body">
+                        <div class="game-tile-title">@title</div>
+                        @if (!string.IsNullOrWhiteSpace(gameId))
+                        {
+                            <div class="game-tile-subtitle">@gameId</div>
+                        }
+                    </div>
+                </button>
+                <DragHandle Label="@title" Class="game-drag-handle"/>
+            </div>
         }
     }
 </div>
@@ -59,6 +64,7 @@
 
     private readonly Dictionary<string, CoverState> _covers = new(StringComparer.OrdinalIgnoreCase);
     private DotNetObjectReference<GameGridView>? _dotNetRef;
+    private ElementReference _grid;
 
     [Parameter] public IReadOnlyList<R4Game> Games { get; set; } = [];
     [Parameter] public EventCallback<R4Game> OnGameSelected { get; set; }
@@ -80,7 +86,37 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         _dotNetRef ??= DotNetObjectReference.Create(this);
+        if (firstRender)
+        {
+            await Js.InvokeVoidAsync("r4eDragDrop.attach", _grid, _dotNetRef, new { axis = "x" });
+        }
+
         await Js.InvokeVoidAsync("r4eLazyImages.observeAll", _dotNetRef);
+    }
+
+    /// <summary>
+    /// Called from JS when a game tile is dropped on another.
+    /// </summary>
+    [JSInvokable]
+    public void OnDrop(int sourceId, int targetId, string position)
+    {
+        if (Editor.FindNode(sourceId) is R4Game game && Editor.FindNode(targetId) is R4Game target &&
+            Enum.TryParse<DropPosition>(position, ignoreCase: true, out var dropPosition))
+        {
+            Editor.MoveGame(game, target, dropPosition);
+        }
+    }
+
+    /// <summary>
+    /// Called from JS when an arrow key is pressed on a tile's drag handle.
+    /// </summary>
+    [JSInvokable]
+    public void OnKeyboardMove(int id, int offset)
+    {
+        if (Editor.FindNode(id) is R4Game game)
+        {
+            Editor.MoveGameBy(game, offset);
+        }
     }
 
     /// <summary>
@@ -153,10 +189,11 @@
         try
         {
             await Js.InvokeVoidAsync("r4eLazyImages.disconnect");
+            await Js.InvokeVoidAsync("r4eDragDrop.detach", _grid);
         }
         catch (JSException ex)
         {
-            Logger.LogWarning(ex, "Could not stop observing game tiles.");
+            Logger.LogWarning(ex, "Could not stop observing or dragging game tiles.");
         }
 
         _dotNetRef?.Dispose();
