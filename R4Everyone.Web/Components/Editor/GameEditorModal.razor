@@ -8,49 +8,54 @@
                 <div class="modal-title">@EditorState.GetGameDisplayTitle(Game)</div>
                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnClose">Close</button>
             </div>
-            <div class="game-modal-body">
-                <div class="modal-left">
-                    <div class="card panel-card shadow-sm">
-                        <div class="card-header">Folders & Cheats</div>
-                        <div class="card-body panel-body">
-                            <div class="modal-actions action-grid">
-                                <button type="button" class="btn btn-success" @onclick="AddFolder">Add Folder</button>
-                                <button type="button" class="btn btn-success" @onclick="AddCheat">Add Cheat</button>
-                                <button type="button" class="btn btn-danger" @onclick="Editor.RemoveSelectedItem"
-                                        disabled="@(Editor.SelectionKind != SelectionKind.Folder)">Remove Folder
-                                </button>
-                                <button type="button" class="btn btn-danger" @onclick="Editor.RemoveSelectedItem"
-                                        disabled="@(Editor.SelectionKind != SelectionKind.Cheat)">Remove Cheat
-                                </button>
-                                <button type="button" class="btn btn-danger" @onclick="RemoveGame">Remove Game</button>
-                            </div>
-                            <GameScopedTreeView Game="Game"/>
+            <div class="modal-tabs" role="tablist" aria-label="Editor sections">
+                @foreach (var (tab, label) in Tabs)
+                {
+                    <button type="button" role="tab" class="modal-tab @(_tab == tab ? "is-active" : string.Empty)"
+                            aria-selected="@(_tab == tab ? "true" : "false")" @onclick="() => _tab = tab">
+                        @label
+                    </button>
+                }
+            </div>
+            <div class="game-modal-body show-@_tab.ToString().ToLowerInvariant()">
+                <div class="card panel-card shadow-sm modal-section modal-section-tree">
+                    <div class="card-header">Folders & Cheats</div>
+                    <div class="card-body panel-body">
+                        <div class="modal-actions action-grid">
+                            <button type="button" class="btn btn-success" @onclick="AddFolder">Add Folder</button>
+                            <button type="button" class="btn btn-success" @onclick="AddCheat">Add Cheat</button>
+                            <button type="button" class="btn btn-danger" @onclick="Editor.RemoveSelectedItem"
+                                    disabled="@(Editor.SelectionKind != SelectionKind.Folder)">Remove Folder
+                            </button>
+                            <button type="button" class="btn btn-danger" @onclick="Editor.RemoveSelectedItem"
+                                    disabled="@(Editor.SelectionKind != SelectionKind.Cheat)">Remove Cheat
+                            </button>
+                            <button type="button" class="btn btn-danger" @onclick="RemoveGame">Remove Game</button>
                         </div>
+                        <GameScopedTreeView Game="Game"/>
                     </div>
                 </div>
-                <div class="modal-right">
-                    <div class="card panel-card shadow-sm">
-                        <div class="card-header">Game Details</div>
-                        <div class="card-body panel-body">
-                            <GameDetailsEditor Game="Game"/>
-                        </div>
+                <div class="card panel-card shadow-sm modal-section modal-section-game">
+                    <div class="card-header">Game Details</div>
+                    <div class="card-body panel-body">
+                        <GameDetailsEditor Game="Game"/>
                     </div>
-                    <div class="card panel-card shadow-sm">
-                        <div class="card-header">Item Details</div>
-                        <div class="card-body panel-body">
-                            @switch (Editor.SelectionKind)
-                            {
-                                case SelectionKind.Folder when Editor.SelectedFolder != null:
-                                    <FolderDetailsEditor Folder="Editor.SelectedFolder"/>
-                                    break;
-                                case SelectionKind.Cheat when Editor.SelectedCheat != null:
-                                    <CheatDetailsEditor Cheat="Editor.SelectedCheat"/>
-                                    break;
-                                default:
-                                    <div class="empty-state">Select a folder or cheat to edit.</div>
-                                    break;
-                            }
-                        </div>
+                </div>
+                <div class="card panel-card shadow-sm modal-section modal-section-item">
+                    <div class="card-header">Item Details</div>
+                    <div class="card-body panel-body">
+                        @switch (Editor.SelectionKind)
+                        {
+                            case SelectionKind.Folder when Editor.SelectedFolder != null:
+                                <FolderDetailsEditor Folder="Editor.SelectedFolder"/>
+                                break;
+                            case SelectionKind.Cheat when Editor.SelectedCheat != null:
+                                <CheatDetailsEditor Cheat="Editor.SelectedCheat"/>
+                                break;
+                            default:
+                                <div class="empty-state">Select a folder or cheat to edit.</div>
+                                break;
+                        }
                     </div>
                 </div>
             </div>
@@ -59,8 +64,25 @@
 }
 
 @code {
+    // On narrow screens only one section is shown at a time; on wider screens all three are visible.
+    private enum Tab
+    {
+        Tree,
+        Game,
+        Item
+    }
+
+    private static readonly (Tab Tab, string Label)[] Tabs =
+    [
+        (Tab.Tree, "Cheats"),
+        (Tab.Game, "Game"),
+        (Tab.Item, "Item")
+    ];
+
     private ElementReference _overlay;
     private R4Game? _focusedGame;
+    private Tab _tab = Tab.Tree;
+    private object? _lastSelectedItem;
 
     /// <summary>
     /// The game being edited. The modal is open while this is set.
@@ -68,6 +90,25 @@
     [Parameter] public R4Game? Game { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Game == null)
+        {
+            _tab = Tab.Tree;
+            _lastSelectedItem = null;
+            return;
+        }
+
+        // Show the item editor whenever a different folder or cheat is selected or added.
+        var selectedItem = (object?)Editor.SelectedCheat ?? Editor.SelectedFolder;
+        if (selectedItem != null && !ReferenceEquals(selectedItem, _lastSelectedItem))
+        {
+            _tab = Tab.Item;
+        }
+
+        _lastSelectedItem = selectedItem;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

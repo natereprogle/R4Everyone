@@ -1,7 +1,6 @@
 @page "/"
 @implements IDisposable
 @inject EditorState Editor
-@inject ViewportService Viewport
 @inject ChangelogService Changelog
 @inject FileDownloadService FileDownload
 @inject GameTdbService GameTdb
@@ -10,48 +9,31 @@
 
 <PageTitle>R4Everyone</PageTitle>
 
-@if (!_isDesktop)
-{
-    <div class="desktop-warning">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h1 class="h4 mb-2">Desktop required</h1>
-                <p class="mb-0">This app is designed for desktop. Please open it on a desktop browser.</p>
-            </div>
-        </div>
+<div class="app-shell">
+    <AppHeaderBar FileName="@Editor.LoadedFileName" HasLoadedFile="Editor.HasLoadedFile" IsDirty="Editor.IsDirty"
+                  ErrorCount="Editor.ValidationErrors.Count" OnShowChangelog="OpenChangelog"/>
+
+    <div class="app-body">
+        <aside class="app-sidebar">
+            <FileControlsPanel CanSave="CanSave" OnNew="NewFile" OnOpen="OpenFileAsync" OnSave="SaveAsync"/>
+
+            <ActionsPanel CanRemoveGame="CanRemoveGame"
+                          Errors="Editor.ValidationErrors"
+                          OnAddGame="AddGame"
+                          OnRemoveGame="RemoveSelectedGame"/>
+        </aside>
+
+        <main class="app-main">
+            <GameGridView Games="Editor.Database?.Games ?? []" OnGameSelected="OpenGameModal"/>
+        </main>
     </div>
-}
-else
-{
-    <div class="app-shell">
-        <AppHeaderBar FileName="@Editor.LoadedFileName" HasLoadedFile="Editor.HasLoadedFile" IsDirty="Editor.IsDirty"
-                      ErrorCount="Editor.ValidationErrors.Count" OnShowChangelog="OpenChangelog"/>
 
-        <div class="app-body container-fluid">
-            <div class="row h-100 g-3">
-                <div class="col-lg-2 h-100 d-flex flex-column gap-3">
-                    <FileControlsPanel CanSave="CanSave" OnNew="NewFile" OnOpen="OpenFileAsync" OnSave="SaveAsync"/>
+    <GameEditorModal Game="_modalGame" OnClose="CloseGameModal"/>
 
-                    <ActionsPanel CanRemoveGame="CanRemoveGame"
-                                  Errors="Editor.ValidationErrors"
-                                  OnAddGame="AddGame"
-                                  OnRemoveGame="RemoveSelectedGame"/>
-                </div>
-
-                <div class="col-lg-10 h-100">
-                    <GameGridView Games="Editor.Database?.Games ?? []" OnGameSelected="OpenGameModal"/>
-                </div>
-            </div>
-        </div>
-
-        <GameEditorModal Game="_modalGame" OnClose="CloseGameModal"/>
-
-        <ChangelogModal IsOpen="_isChangelogOpen" AppVersion="@Changelog.AppVersion" OnClose="CloseChangelogAsync"/>
-    </div>
-}
+    <ChangelogModal IsOpen="_isChangelogOpen" AppVersion="@Changelog.AppVersion" OnClose="CloseChangelogAsync"/>
+</div>
 
 @code {
-    private bool _isDesktop = true;
     private bool _isChangelogOpen;
 
     // The game shown in the editor modal, or null when the modal is closed.
@@ -63,7 +45,6 @@ else
     protected override void OnInitialized()
     {
         Editor.StateChanged += HandleStateChanged;
-        Viewport.ViewportChanged += HandleViewportChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -73,8 +54,6 @@ else
             return;
         }
 
-        await Viewport.InitializeAsync();
-        _isDesktop = Viewport.IsDesktop;
         _isChangelogOpen = await Changelog.HasUnseenChangesAsync();
 
         if (!GameTdb.IsAvailable)
@@ -93,12 +72,6 @@ else
             _modalGame = null;
         }
 
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    private void HandleViewportChanged()
-    {
-        _isDesktop = Viewport.IsDesktop;
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -207,6 +180,5 @@ else
     public void Dispose()
     {
         Editor.StateChanged -= HandleStateChanged;
-        Viewport.ViewportChanged -= HandleViewportChanged;
     }
 }

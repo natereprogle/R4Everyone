@@ -15,7 +15,6 @@ builder.Services.AddScoped<CoverArtService>();
 builder.Services.AddScoped<ChangelogService>();
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<FileDownloadService>();
-builder.Services.AddScoped<ViewportService>();
 builder.Services.AddScoped<ToastService>();
 
 var host = builder.Build();
