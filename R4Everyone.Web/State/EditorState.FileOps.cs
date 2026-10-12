@@ -55,8 +55,29 @@ public partial class EditorState
 
     public void MarkSaved()
     {
-        IsDirty = false;
+        MarkHistorySaved();
         NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Replaces the open file with games imported from codelist XML. The result has not been saved as a .dat file
+    /// yet, so it opens with unsaved changes.
+    /// </summary>
+    /// <exception cref="FormatException">The XML is not a valid codelist.</exception>
+    public void ImportXml(string xml, string fileName)
+    {
+        var database = R4CodelistXml.Import(xml);
+        OpenDatabase(database, Path.ChangeExtension(fileName, ".dat"), isDirty: true);
+    }
+
+    public string ExportXml()
+    {
+        if (Database == null)
+        {
+            throw new InvalidOperationException("There is no open file to export.");
+        }
+
+        return R4CodelistXml.Export(Database);
     }
 
     /// <summary>
@@ -69,9 +90,13 @@ public partial class EditorState
             throw new InvalidDataException("The ROM file is too small to contain a valid header.");
         }
 
-        game.GameId = Encoding.ASCII.GetString(header, RomGameIdOffset, RomGameIdLength);
-        game.GameChecksum = Crc32Helper.ConvertCrc32ToString(Crc32Helper.CalculateCrc32(header)).ToUpperInvariant();
-        MarkDirty(game);
+        var gameId = Encoding.ASCII.GetString(header, RomGameIdOffset, RomGameIdLength);
+        var checksum = Crc32Helper.ConvertCrc32ToString(Crc32Helper.CalculateCrc32(header)).ToUpperInvariant();
+        Change(game, () =>
+        {
+            game.GameId = gameId;
+            game.GameChecksum = checksum;
+        });
     }
 
     private void OpenDatabase(R4Database database, string fileName, bool isDirty = false)
@@ -79,7 +104,7 @@ public partial class EditorState
         Database = database;
         HasLoadedFile = true;
         LoadedFileName = string.IsNullOrWhiteSpace(fileName) ? NewFileName : fileName;
-        IsDirty = isDirty;
+        ResetHistory(isDirty);
         ResetCaches();
         ClearSelection();
         Revalidate();
@@ -105,7 +130,6 @@ public partial class EditorState
         Database = new R4Database();
         HasLoadedFile = true;
         LoadedFileName = NewFileName;
-        IsDirty = false;
         return Database;
     }
 }

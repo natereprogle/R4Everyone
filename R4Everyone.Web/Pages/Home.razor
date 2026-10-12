@@ -1,6 +1,9 @@
 @page "/"
 @implements IDisposable
 @inject EditorState Editor
+@inject EditorCommands Commands
+@inject ConfirmService Confirm
+@inject KeyboardShortcutService Shortcuts
 @inject ChangelogService Changelog
 @inject FileDownloadService FileDownload
 @inject GameTdbService GameTdb
@@ -15,12 +18,24 @@
 
     <div class="app-body">
         <aside class="app-sidebar">
-            <FileControlsPanel CanSave="CanSave" OnNew="NewFile" OnOpen="OpenFileAsync" OnSave="SaveAsync"/>
+            <FileControlsPanel CanSave="CanSave"
+                               CanExport="HasGames"
+                               OnNew="NewFileAsync"
+                               OnOpen="OpenFileAsync"
+                               OnSave="SaveAsync"
+                               OnImportXml="ImportXmlAsync"
+                               OnExportXml="ExportXmlAsync"/>
 
-            <ActionsPanel CanRemoveGame="CanRemoveGame"
+            <ActionsPanel CanUndo="Editor.CanUndo"
+                          CanRedo="Editor.CanRedo"
+                          CanSortGames="@(Editor.Database?.Games.Count > 1)"
+                          CanRemoveGame="CanRemoveGame"
                           Errors="Editor.ValidationErrors"
+                          OnUndo="Editor.Undo"
+                          OnRedo="Editor.Redo"
                           OnAddGame="AddGame"
-                          OnRemoveGame="RemoveSelectedGame"/>
+                          OnSortGames="Editor.SortGames"
+                          OnRemoveGame="RemoveSelectedGameAsync"/>
         </aside>
 
         <main class="app-main">
@@ -50,10 +65,16 @@
 
     private bool CanSave => Editor.HasLoadedFile && Editor.IsDirty && Editor.IsValid;
     private bool CanRemoveGame => Editor.SelectionKind == SelectionKind.Game;
+    private bool HasGames => Editor.Database?.Games.Count > 0;
+
+    // Shortcuts are ignored while a dialog is open, so undo cannot change what the dialog is about.
+    private bool IsDialogOpen => Confirm.Current != null || _pendingOpen != null;
 
     protected override void OnInitialized()
     {
         Editor.StateChanged += HandleStateChanged;
+        Shortcuts.UndoRequested += HandleUndoShortcut;
+        Shortcuts.RedoRequested += HandleRedoShortcut;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -63,6 +84,7 @@
             return;
         }
 
+        await Shortcuts.RegisterAsync();
         _isChangelogOpen = await Changelog.HasUnseenChangesAsync();
 
         if (!GameTdb.IsAvailable)
@@ -82,6 +104,22 @@
         }
 
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleUndoShortcut()
+    {
+        if (!IsDialogOpen)
+        {
+            Editor.Undo();
+        }
+    }
+
+    private void HandleRedoShortcut()
+    {
+        if (!IsDialogOpen)
+        {
+            Editor.Redo();
+        }
     }
 
     private void OpenGameModal(R4Game game)
@@ -115,16 +153,22 @@
         Editor.AddGame();
     }
 
-    private void RemoveSelectedGame()
+    private async Task RemoveSelectedGameAsync()
     {
         if (Editor.SelectionKind == SelectionKind.Game && Editor.SelectedGame != null)
         {
-            Editor.RemoveGame(Editor.SelectedGame);
+            await Commands.RemoveGameAsync(Editor.SelectedGame);
         }
     }
 
-    private void NewFile()
+    private async Task NewFileAsync()
     {
+        if (!await Commands.ConfirmDiscardChangesAsync("Creating a new file"))
+        {
+            return;
+        }
+
+        _modalGame = null;
         Editor.NewFile();
         Toasts.ShowInfo("New file created. Ready to edit!");
     }
@@ -145,6 +189,11 @@
         {
             Logger.LogError(ex, "Could not read {FileName}.", file.Name);
             Toasts.ShowError($"Could not read {file.Name}: {ex.Message}");
+            return;
+        }
+
+        if (!await Commands.ConfirmDiscardChangesAsync($"Opening {file.Name}"))
+        {
             return;
         }
 
@@ -194,6 +243,47 @@
         }
     }
 
+    private async Task ImportXmlAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        try
+        {
+            await using var stream = file.OpenReadStream(long.MaxValue);
+            using var reader = new StreamReader(stream);
+            var xml = await reader.ReadToEndAsync();
+
+            if (!await Commands.ConfirmDiscardChangesAsync($"Importing {file.Name}"))
+            {
+                return;
+            }
+
+            _modalGame = null;
+            Editor.ImportXml(xml, file.Name);
+            Toasts.ShowInfo($"Imported {Editor.Database?.Games.Count ?? 0} games from {file.Name}. Save to create {Editor.SaveFileName}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not import {FileName}.", file.Name);
+            Toasts.ShowError($"Could not import {file.Name}: {ex.Message}");
+        }
+    }
+
+    private async Task ExportXmlAsync()
+    {
+        var fileName = Path.ChangeExtension(Editor.SaveFileName, ".xml");
+        try
+        {
+            var xml = Editor.ExportXml();
+            await FileDownload.DownloadAsync(fileName, System.Text.Encoding.UTF8.GetBytes(xml), "application/xml");
+            Toasts.ShowInfo($"Exported {fileName}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not export {FileName}.", fileName);
+            Toasts.ShowError($"Could not export {fileName}: {ex.Message}");
+        }
+    }
+
     private async Task SaveAsync()
     {
         if (!CanSave)
@@ -231,6 +321,8 @@
     public void Dispose()
     {
         Editor.StateChanged -= HandleStateChanged;
+        Shortcuts.UndoRequested -= HandleUndoShortcut;
+        Shortcuts.RedoRequested -= HandleRedoShortcut;
     }
 
     private sealed record PendingOpen(byte[] File, string FileName, string Marker);

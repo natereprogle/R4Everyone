@@ -33,13 +33,14 @@ public partial class EditorState
         }
 
         var text = HexWord.Sanitize(input);
-        buffer[index] = text;
-        if (HexWord.TryParse(HexWord.SwapEndian(text), out var value))
+        Change(game, () =>
         {
-            game.MasterCodes[index] = value;
-        }
-
-        MarkDirty(game);
+            buffer[index] = text;
+            if (HexWord.TryParse(HexWord.SwapEndian(text), out var value))
+            {
+                game.MasterCodes[index] = value;
+            }
+        }, game, $"MasterCode{index}");
     }
 
     public string GetCheatCodeText(R4Cheat cheat)
@@ -59,40 +60,50 @@ public partial class EditorState
     /// </summary>
     public void UpdateCheatCodeText(string text)
     {
-        if (SelectedCheat == null)
+        if (SelectedCheat is not { } cheat)
         {
             return;
         }
 
-        var words = CheatCodeText.ParseWords(text);
+        var words = NormalizeCodeWords(cheat, CheatCodeText.ParseWords(text));
+        Change(SelectedGame, () => SetCheatCodeWords(cheat, words), cheat, nameof(R4Cheat.Code));
+    }
+
+    public void UpdateActivatorOptions(R4Game.CheatActivatorOptions options)
+    {
+        if (SelectedCheat is not { } cheat)
+        {
+            return;
+        }
+
+        var payload = R4Game.AnalyzeCheatActivator(cheat).PayloadWords;
+        Change(SelectedGame, () =>
+        {
+            _xyModePreference[cheat] = options.XyMode;
+            SetCheatCodeWords(cheat, BuildCodeWords(payload, options));
+        });
+    }
+
+    /// <summary>
+    /// Rebuilds a complete code so any activator rows are normalized. Partial input is returned unchanged.
+    /// </summary>
+    private List<string> NormalizeCodeWords(R4Cheat cheat, List<string> words)
+    {
         var values = new List<uint>(words.Count);
         foreach (var word in words)
         {
             if (!HexWord.TryParse(word, out var value))
             {
-                SetCheatCodeWords(SelectedCheat, words);
-                return;
+                return words;
             }
 
             values.Add(value);
         }
 
         var analysis = R4Game.AnalyzeCheatActivator(values);
-        RememberXyMode(SelectedCheat, analysis.Options);
-        var options = ApplyXyModePreference(SelectedCheat, analysis.Options);
-        SetCheatCodeWords(SelectedCheat, BuildCodeWords(analysis.PayloadWords, options));
-    }
-
-    public void UpdateActivatorOptions(R4Game.CheatActivatorOptions options)
-    {
-        if (SelectedCheat == null)
-        {
-            return;
-        }
-
-        _xyModePreference[SelectedCheat] = options.XyMode;
-        var payload = R4Game.AnalyzeCheatActivator(SelectedCheat).PayloadWords;
-        SetCheatCodeWords(SelectedCheat, BuildCodeWords(payload, options));
+        RememberXyMode(cheat, analysis.Options);
+        var options = ApplyXyModePreference(cheat, analysis.Options);
+        return BuildCodeWords(analysis.PayloadWords, options);
     }
 
     private void SetCheatCodeWords(R4Cheat cheat, List<string> words)
@@ -106,8 +117,6 @@ public partial class EditorState
                 .Select(word => BitConverter.GetBytes(uint.Parse(word, NumberStyles.AllowHexSpecifier)))
                 .ToList();
         }
-
-        MarkDirty(SelectedGame);
     }
 
     private static List<string> BuildCodeWords(IReadOnlyList<uint> payload, R4Game.CheatActivatorOptions options)

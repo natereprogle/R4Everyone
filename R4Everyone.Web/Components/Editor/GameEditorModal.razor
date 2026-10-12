@@ -1,4 +1,5 @@
 @inject EditorState Editor
+@inject EditorCommands Commands
 
 @if (Game != null)
 {
@@ -6,7 +7,15 @@
         <div class="game-modal" @onclick:stopPropagation="true">
             <div class="game-modal-header">
                 <div class="modal-title">@EditorState.GetGameDisplayTitle(Game)</div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnClose">Close</button>
+                <div class="modal-header-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Editor.Undo"
+                            disabled="@(!Editor.CanUndo)" title="Undo (Ctrl+Z)">Undo
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Editor.Redo"
+                            disabled="@(!Editor.CanRedo)" title="Redo (Ctrl+Y or Ctrl+Shift+Z)">Redo
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnClose">Close</button>
+                </div>
             </div>
             <div class="modal-tabs" role="tablist" aria-label="Editor sections">
                 @foreach (var (tab, label) in Tabs)
@@ -22,15 +31,39 @@
                     <div class="card-header">Folders & Cheats</div>
                     <div class="card-body panel-body">
                         <div class="modal-actions action-grid">
-                            <button type="button" class="btn btn-success" @onclick="AddFolder">Add Folder</button>
-                            <button type="button" class="btn btn-success" @onclick="AddCheat">Add Cheat</button>
-                            <button type="button" class="btn btn-danger" @onclick="Editor.RemoveSelectedItem"
-                                    disabled="@(Editor.SelectionKind != SelectionKind.Folder)">Remove Folder
+                            <div class="button-pair">
+                                <button type="button" class="btn btn-success" @onclick="AddFolder">Add Folder</button>
+                                <button type="button" class="btn btn-success" @onclick="AddCheat">Add Cheat</button>
+                            </div>
+                            <div class="button-pair">
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        @onclick="() => Editor.MoveSelected(-1)" disabled="@(!Editor.CanMoveSelected(-1))"
+                                        title="Move the selected folder or cheat up">Move Up
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        @onclick="() => Editor.MoveSelected(1)" disabled="@(!Editor.CanMoveSelected(1))"
+                                        title="Move the selected folder or cheat down">Move Down
+                                </button>
+                            </div>
+                            @if (Editor.SelectionKind == SelectionKind.Cheat && MoveTargets.Count > 0)
+                            {
+                                @* Re-created after each move so it shows the placeholder again. *@
+                                <select @key="_moveCount" class="form-select form-select-sm"
+                                        aria-label="Move cheat to folder" @onchange="MoveCheatTo">
+                                    <option value="" disabled selected>Move cheat to…</option>
+                                    @for (var i = 0; i < MoveTargets.Count; i++)
+                                    {
+                                        <option value="@i">@MoveTargets[i].Label</option>
+                                    }
+                                </select>
+                            }
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Editor.SortSelectedContainer"
+                                    title="@SortTitle">@SortLabel
                             </button>
-                            <button type="button" class="btn btn-danger" @onclick="Editor.RemoveSelectedItem"
-                                    disabled="@(Editor.SelectionKind != SelectionKind.Cheat)">Remove Cheat
+                            <button type="button" class="btn btn-danger" @onclick="Commands.RemoveSelectedItemAsync"
+                                    disabled="@(Editor.SelectedItem == null)">@RemoveItemLabel
                             </button>
-                            <button type="button" class="btn btn-danger" @onclick="RemoveGame">Remove Game</button>
+                            <button type="button" class="btn btn-danger" @onclick="RemoveGameAsync">Remove Game</button>
                         </div>
                         <GameScopedTreeView Game="Game"/>
                     </div>
@@ -83,6 +116,7 @@
     private R4Game? _focusedGame;
     private Tab _tab = Tab.Tree;
     private object? _lastSelectedItem;
+    private int _moveCount;
 
     /// <summary>
     /// The game being edited. The modal is open while this is set.
@@ -90,6 +124,21 @@
     [Parameter] public R4Game? Game { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
+
+    private IReadOnlyList<MoveTarget> MoveTargets => Editor.GetCheatMoveTargets();
+
+    private string RemoveItemLabel => Editor.SelectionKind switch
+    {
+        SelectionKind.Folder => "Remove Folder",
+        SelectionKind.Cheat => "Remove Cheat",
+        _ => "Remove Folder or Cheat"
+    };
+
+    private string SortLabel => Editor.SortContainerName == null ? "Sort Top Level A–Z" : "Sort Folder A–Z";
+
+    private string SortTitle => Editor.SortContainerName is { } name
+        ? $"Sort the contents of '{name}' by title, folders first"
+        : "Sort the game's top-level folders and cheats by title, folders first";
 
     protected override void OnParametersSet()
     {
@@ -149,9 +198,22 @@
         Editor.AddCheat();
     }
 
-    private async Task RemoveGame()
+    private void MoveCheatTo(ChangeEventArgs args)
     {
-        Editor.RemoveGame(Game!);
-        await OnClose.InvokeAsync();
+        var targets = MoveTargets;
+        if (int.TryParse(args.Value?.ToString(), out var index) && index >= 0 && index < targets.Count)
+        {
+            Commands.MoveSelectedCheat(targets[index].Folder);
+        }
+
+        _moveCount++;
+    }
+
+    private async Task RemoveGameAsync()
+    {
+        if (await Commands.RemoveGameAsync(Game!))
+        {
+            await OnClose.InvokeAsync();
+        }
     }
 }

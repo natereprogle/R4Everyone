@@ -324,7 +324,7 @@ body {
 }
 
 .controls-panel {
-    flex: 0 0 40%;
+    flex: 0 0 auto;
 }
 
 .actions-panel {
@@ -389,6 +389,23 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+}
+
+/* Two buttons side by side, such as Undo and Redo. */
+.button-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.button-pair > .btn {
+    margin-bottom: 0;
+}
+
+.modal-header-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.5rem;
 }
 
 .section-title {
@@ -1109,7 +1126,14 @@ body {
         flex: 1 1 auto;
         width: auto !important;
         margin-bottom: 0;
+        padding: 0.3rem 0.6rem;
+        font-size: 0.875rem;
         white-space: nowrap;
+    }
+
+    /* Let paired buttons flow with the rest of the toolbar. */
+    .app-sidebar .button-pair {
+        display: contents;
     }
 
     .app-sidebar .validation-list {
@@ -1201,16 +1225,6 @@ body {
     .game-modal-body.show-game .modal-section-game,
     .game-modal-body.show-item .modal-section-item {
         display: flex;
-    }
-
-    .modal-actions.action-grid {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .modal-actions .btn {
-        flex: 1 1 calc(50% - 0.5rem);
     }
 
     .changelog-backdrop {

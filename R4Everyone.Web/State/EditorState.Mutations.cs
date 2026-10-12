@@ -14,25 +14,30 @@ public partial class EditorState
             MasterCodes = new uint[MasterCodeCount]
         };
 
-        EnsureDatabase().Games.Add(game);
-        Select(SelectionInfo.ForGame(game));
-        MarkDirty(game);
+        Change(null, () =>
+        {
+            EnsureDatabase().Games.Add(game);
+            Database!.MarkGameDirty(game);
+            Select(SelectionInfo.ForGame(game));
+        });
         return game;
     }
 
     public void RemoveGame(R4Game game)
     {
-        if (Database == null || !Database.Games.Remove(game))
+        if (Database?.Games.Contains(game) != true)
         {
             return;
         }
 
-        if (ReferenceEquals(SelectedGame, game))
+        Change(null, () =>
         {
-            ClearSelection();
-        }
-
-        MarkDirty(null);
+            Database.Games.Remove(game);
+            if (ReferenceEquals(SelectedGame, game))
+            {
+                ClearSelection();
+            }
+        });
     }
 
     /// <summary>
@@ -40,7 +45,7 @@ public partial class EditorState
     /// </summary>
     public void AddFolder()
     {
-        if (SelectedGame == null)
+        if (SelectedGame is not { } game)
         {
             return;
         }
@@ -52,9 +57,11 @@ public partial class EditorState
             OneHot = false
         };
 
-        SelectedGame.Items.Add(folder);
-        Select(SelectionInfo.ForFolder(SelectedGame, folder));
-        MarkDirty(SelectedGame);
+        Change(game, () =>
+        {
+            game.Items.Add(folder);
+            Select(SelectionInfo.ForFolder(game, folder));
+        });
     }
 
     /// <summary>
@@ -63,7 +70,7 @@ public partial class EditorState
     /// </summary>
     public void AddCheat()
     {
-        if (SelectedGame == null)
+        if (SelectedGame is not { } game)
         {
             return;
         }
@@ -75,17 +82,12 @@ public partial class EditorState
             Enabled = false
         };
 
-        if (SelectedFolder != null)
+        var folder = SelectedFolder;
+        Change(game, () =>
         {
-            SelectedFolder.Items.Add(cheat);
-        }
-        else
-        {
-            SelectedGame.Items.Add(cheat);
-        }
-
-        Select(SelectionInfo.ForCheat(SelectedGame, SelectedFolder, cheat));
-        MarkDirty(SelectedGame);
+            (folder?.Items ?? game.Items).Add(cheat);
+            Select(SelectionInfo.ForCheat(game, folder, cheat));
+        });
     }
 
     /// <summary>
@@ -93,77 +95,46 @@ public partial class EditorState
     /// </summary>
     public void RemoveSelectedItem()
     {
-        if (SelectedGame == null)
+        if (SelectedGame is not { } game || SelectedItem is not { } item ||
+            FindParentItems(game, item) is not { } siblings)
         {
             return;
         }
 
-        var game = SelectedGame;
-        switch (SelectionKind)
+        var parentFolder = SelectionKind == SelectionKind.Cheat ? SelectedFolder : null;
+        Change(game, () =>
         {
-            case SelectionKind.Folder when SelectedFolder != null:
-                game.Items.Remove(SelectedFolder);
-                Select(SelectionInfo.ForGame(game));
-                break;
-            case SelectionKind.Cheat when SelectedCheat != null && SelectedFolder != null:
-                SelectedFolder.Items.Remove(SelectedCheat);
-                Select(SelectionInfo.ForFolder(game, SelectedFolder));
-                break;
-            case SelectionKind.Cheat when SelectedCheat != null:
-                game.Items.Remove(SelectedCheat);
-                Select(SelectionInfo.ForGame(game));
-                break;
-            default:
-                return;
-        }
-
-        MarkDirty(game);
+            siblings.Remove(item);
+            Select(parentFolder != null ? SelectionInfo.ForFolder(game, parentFolder) : SelectionInfo.ForGame(game));
+        });
     }
 
-    public void UpdateGameId(R4Game game, string value)
-    {
-        game.GameId = value;
-        MarkDirty(game);
-    }
+    public void UpdateGameId(R4Game game, string value) =>
+        Change(game, () => game.GameId = value, game, nameof(R4Game.GameId));
 
-    public void UpdateGameTitle(R4Game game, string value)
-    {
-        game.GameTitle = value;
-        MarkDirty(game);
-    }
+    public void UpdateGameTitle(R4Game game, string value) =>
+        Change(game, () => game.GameTitle = value, game, nameof(R4Game.GameTitle));
 
-    public void UpdateGameEnabled(R4Game game, bool value)
-    {
-        game.GameEnabled = value;
-        MarkDirty(game);
-    }
+    public void UpdateGameEnabled(R4Game game, bool value) =>
+        Change(game, () => game.GameEnabled = value);
 
-    public void UpdateGameChecksum(R4Game game, string value)
-    {
-        game.GameChecksum = value;
-        MarkDirty(game);
-    }
+    public void UpdateGameChecksum(R4Game game, string value) =>
+        Change(game, () => game.GameChecksum = value, game, nameof(R4Game.GameChecksum));
 
     public void UpdateFolderTitle(string value)
     {
-        if (SelectedFolder == null)
+        if (SelectedFolder is { } folder)
         {
-            return;
+            Change(SelectedGame, () => folder.Title = value, folder, nameof(R4Folder.Title));
         }
-
-        SelectedFolder.Title = value;
-        MarkDirty(SelectedGame);
     }
 
     public void UpdateFolderDescription(string value)
     {
-        if (SelectedFolder == null)
+        if (SelectedFolder is { } folder)
         {
-            return;
+            Change(SelectedGame, () => folder.Description = value, folder, nameof(R4Folder.Description));
         }
-
-        SelectedFolder.Description = value;
-        MarkDirty(SelectedGame);
     }
 
     /// <summary>
@@ -171,45 +142,40 @@ public partial class EditorState
     /// </summary>
     public void UpdateFolderOneHot(bool value)
     {
-        if (SelectedFolder == null)
+        if (SelectedFolder is not { } folder)
         {
             return;
         }
 
-        SelectedFolder.OneHot = value;
-        if (value)
+        Change(SelectedGame, () =>
         {
-            var keptOne = false;
-            foreach (var cheat in SelectedFolder.Items.OfType<R4Cheat>().Where(cheat => cheat.Enabled))
+            folder.OneHot = value;
+            if (value)
             {
-                cheat.Enabled = !keptOne;
-                keptOne = true;
+                var keptOne = false;
+                foreach (var cheat in folder.Items.OfType<R4Cheat>().Where(cheat => cheat.Enabled))
+                {
+                    cheat.Enabled = !keptOne;
+                    keptOne = true;
+                }
             }
-        }
-
-        MarkDirty(SelectedGame);
+        });
     }
 
     public void UpdateCheatTitle(string value)
     {
-        if (SelectedCheat == null)
+        if (SelectedCheat is { } cheat)
         {
-            return;
+            Change(SelectedGame, () => cheat.Title = value, cheat, nameof(R4Cheat.Title));
         }
-
-        SelectedCheat.Title = value;
-        MarkDirty(SelectedGame);
     }
 
     public void UpdateCheatDescription(string value)
     {
-        if (SelectedCheat == null)
+        if (SelectedCheat is { } cheat)
         {
-            return;
+            Change(SelectedGame, () => cheat.Description = value, cheat, nameof(R4Cheat.Description));
         }
-
-        SelectedCheat.Description = value;
-        MarkDirty(SelectedGame);
     }
 
     /// <summary>
@@ -217,20 +183,22 @@ public partial class EditorState
     /// </summary>
     public void UpdateCheatEnabled(bool value)
     {
-        if (SelectedCheat == null)
+        if (SelectedCheat is not { } cheat)
         {
             return;
         }
 
-        SelectedCheat.Enabled = value;
-        if (value && SelectedFolder is { OneHot: true })
+        var folder = SelectedFolder;
+        Change(SelectedGame, () =>
         {
-            foreach (var sibling in SelectedFolder.Items.OfType<R4Cheat>())
+            cheat.Enabled = value;
+            if (value && folder is { OneHot: true })
             {
-                sibling.Enabled = ReferenceEquals(sibling, SelectedCheat);
+                foreach (var sibling in folder.Items.OfType<R4Cheat>())
+                {
+                    sibling.Enabled = ReferenceEquals(sibling, cheat);
+                }
             }
-        }
-
-        MarkDirty(SelectedGame);
+        });
     }
 }

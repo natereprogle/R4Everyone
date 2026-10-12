@@ -24,7 +24,6 @@ public partial class EditorState
     public R4Database? Database { get; private set; }
     public bool HasLoadedFile { get; private set; }
     public string? LoadedFileName { get; private set; }
-    public bool IsDirty { get; private set; }
 
     public SelectionKind SelectionKind { get; private set; } = SelectionKind.None;
     public R4Game? SelectedGame { get; private set; }
@@ -44,7 +43,6 @@ public partial class EditorState
             LoadedFileName = NewFileName;
         }
 
-        IsDirty = true;
         if (game != null)
         {
             Database?.MarkGameDirty(game);
