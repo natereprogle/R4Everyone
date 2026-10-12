@@ -1,0 +1,75 @@
+@if (IsOpen)
+{
+    <div class="prompt-backdrop" @onclick="OnCancel">
+        <div class="prompt-modal" role="dialog" aria-modal="true" aria-labelledby="encoding-prompt-title"
+             @onclick:stopPropagation="true">
+            <div class="prompt-header">
+                <div class="modal-title" id="encoding-prompt-title">Choose an encoding</div>
+            </div>
+            <div class="prompt-body">
+                <p>
+                    <strong>@FileName</strong> has an unrecognized encoding marker
+                    (<code>@Marker</code>). Some online databases leave this blank. Choose the encoding the file
+                    should use:
+                </p>
+
+                <div class="encoding-options">
+                    @foreach (var (encoding, label, description) in Options)
+                    {
+                        var id = $"encoding-{encoding}";
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="encoding" id="@id"
+                                   checked="@(_selected == encoding)" @onchange="() => _selected = encoding"/>
+                            <label class="form-check-label" for="@id">
+                                <span class="encoding-label">@label</span>
+                                <span class="encoding-description">@description</span>
+                            </label>
+                        </div>
+                    }
+                </div>
+
+                <p class="form-text mb-0">
+                    The file will open with unsaved changes. Save it to write the new marker. This only changes the
+                    marker your R4 cart reads; R4Everyone always shows titles and descriptions as UTF-8.
+                </p>
+            </div>
+            <div class="prompt-footer">
+                <button type="button" class="btn btn-outline-secondary" @onclick="OnCancel">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="() => OnSelected.InvokeAsync(_selected)">
+                    Open file
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly (R4Encoding Encoding, string Label, string Description)[] Options =
+    [
+        (R4Encoding.UTF8, "UTF-8", "R4Everyone's default. Use this if you're not sure."),
+        (R4Encoding.GBK, "GBK", "Simplified Chinese"),
+        (R4Encoding.BIG5, "Big5", "Traditional Chinese"),
+        (R4Encoding.SJIS, "Shift-JIS", "Japanese")
+    ];
+
+    private R4Encoding _selected = R4Encoding.UTF8;
+
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string FileName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The file's current marker bytes, formatted for display.
+    /// </summary>
+    [Parameter] public string Marker { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<R4Encoding> OnSelected { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!IsOpen)
+        {
+            _selected = R4Encoding.UTF8;
+        }
+    }
+}

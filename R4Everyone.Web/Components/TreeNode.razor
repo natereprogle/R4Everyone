@@ -1,9 +1,13 @@
 @inject EditorState Editor
 
 <div class="tree-node-row @(IsSelected ? "selected" : "")" style="padding-left: @(Level * 16)px" @onclick="HandleSelect"
-     @onclick:stopPropagation="true">
-    <button class="tree-toggle" disabled="@(!CanToggle)" @onclick="HandleToggle" @onclick:stopPropagation="true">
-        @if (CanToggle)
+     @onclick:stopPropagation="true"
+     data-drag-id="@NodeId" data-drop-id="@NodeId" data-drag-kind="@(IsFolder ? "folder" : "cheat")"
+     data-drag-parent="@Editor.GetNodeId(Container)" data-level="@Level"
+     data-has-children="@(IsExpanded && Folder!.Items.Count > 0 ? "true" : "false")">
+    <DragHandle Label="@DisplayName"/>
+    <button class="tree-toggle" disabled="@(!IsFolder)" @onclick="HandleToggle" @onclick:stopPropagation="true">
+        @if (IsFolder)
         {
             <span>@(IsExpanded ? "v" : ">")</span>
         }
@@ -12,116 +16,77 @@
             <span class="tree-toggle-placeholder">-</span>
         }
     </button>
-    <span class="tree-node-type badge text-bg-light">@NodeTypeLabel</span>
+    <span class="tree-node-type badge text-bg-light">@(IsFolder ? "Folder" : "Cheat")</span>
     <span class="tree-node-name">@DisplayName</span>
 </div>
 
-@if (CanToggle && IsExpanded)
+@if (IsExpanded && Folder is { } folder)
 {
-    @foreach (var child in ChildNodes)
+    @foreach (var item in folder.Items)
     {
-        <TreeNode Game="Game" Folder="child.Folder" Cheat="child.Cheat" Level="@(Level + 1)"/>
+        switch (item)
+        {
+            case R4Folder nestedFolder:
+                <TreeNode @key="item" Game="Game" Container="folder" Folder="nestedFolder" Level="@(Level + 1)"/>
+                break;
+            case R4Cheat cheat:
+                <TreeNode @key="item" Game="Game" Container="folder" Folder="folder" Cheat="cheat" Level="@(Level + 1)"/>
+                break;
+        }
     }
 }
 
 @code {
-    [Parameter] public R4Game Game { get; set; } = null!;
+    /// <summary>
+    /// A folder or cheat within <see cref="Game"/>. A cheat node sets <see cref="Cheat"/>, and <see cref="Folder"/> to
+    /// its parent folder if it has one; a folder node sets only <see cref="Folder"/>.
+    /// </summary>
+    [Parameter, EditorRequired] public R4Game Game { get; set; } = null!;
+
+    /// <summary>
+    /// The game or folder whose list contains this node.
+    /// </summary>
+    [Parameter, EditorRequired] public object Container { get; set; } = null!;
+
     [Parameter] public R4Folder? Folder { get; set; }
     [Parameter] public R4Cheat? Cheat { get; set; }
     [Parameter] public int Level { get; set; }
 
-    private bool IsGameNode => Folder == null && Cheat == null;
-    private bool IsFolderNode => Folder != null && Cheat == null;
-    private bool IsCheatNode => Cheat != null;
+    // A cheat node also carries its parent folder, so the node type must come from Cheat, not Folder.
+    private bool IsFolder => Cheat == null;
+    private int NodeId => Editor.GetNodeId(IsFolder ? Folder! : Cheat!);
+    private bool IsExpanded => IsFolder && Folder != null && Editor.IsExpanded(Folder);
 
-    private bool CanToggle => IsGameNode || IsFolderNode;
-    private bool IsExpanded => IsGameNode ? Editor.IsExpanded(Game) : Folder != null && Editor.IsExpanded(Folder);
+    private bool IsSelected => IsFolder
+        ? Editor.SelectionKind == SelectionKind.Folder && ReferenceEquals(Editor.SelectedFolder, Folder)
+        : Editor.SelectionKind == SelectionKind.Cheat && ReferenceEquals(Editor.SelectedCheat, Cheat);
 
-    private bool IsSelected => Editor.SelectionKind switch
-    {
-        SelectionKind.Game => IsGameNode && ReferenceEquals(Editor.SelectedGame, Game),
-        SelectionKind.Folder => IsFolderNode && ReferenceEquals(Editor.SelectedFolder, Folder),
-        SelectionKind.Cheat => IsCheatNode && ReferenceEquals(Editor.SelectedCheat, Cheat),
-        _ => false
-    };
-
-    private string NodeTypeLabel => IsGameNode ? "Game" : IsFolderNode ? "Folder" : "Cheat";
-
-    private string DisplayName => IsGameNode
-        ? EditorState.GetGameDisplayTitle(Game)
-        : IsFolderNode
-            ? (string.IsNullOrWhiteSpace(Folder!.Title) ? "(untitled folder)" : Folder.Title)
-            : (string.IsNullOrWhiteSpace(Cheat!.Title) ? "(untitled cheat)" : Cheat.Title);
-
-    private IEnumerable<(R4Folder? Folder, R4Cheat? Cheat)> ChildNodes
-    {
-        get
-        {
-            if (IsGameNode)
-            {
-                foreach (var item in Game.Items)
-                {
-                    switch (item)
-                    {
-                        case R4Folder folder:
-                            yield return (folder, null);
-                            break;
-                        case R4Cheat cheat:
-                            yield return (null, cheat);
-                            break;
-                    }
-                }
-            }
-            else if (IsFolderNode && Folder != null)
-            {
-                foreach (var item in Folder.Items)
-                {
-                    switch (item)
-                    {
-                        case R4Folder nestedFolder:
-                            yield return (nestedFolder, null);
-                            break;
-                        case R4Cheat cheat:
-                            yield return (Folder, cheat);
-                            break;
-                    }
-                }
-            }
-        }
-    }
+    private string DisplayName => IsFolder
+        ? string.IsNullOrWhiteSpace(Folder?.Title) ? "(untitled folder)" : Folder.Title
+        : string.IsNullOrWhiteSpace(Cheat!.Title) ? "(untitled cheat)" : Cheat.Title;
 
     private void HandleSelect()
     {
+        // Clicking the selected node again returns the selection to the game.
         if (IsSelected)
-        {
-            Editor.Deselect();
-            return;
-        }
-
-        if (IsGameNode)
         {
             Editor.Select(SelectionInfo.ForGame(Game));
         }
-        else if (IsFolderNode && Folder != null)
-        {
-            Editor.Select(SelectionInfo.ForFolder(Game, Folder));
-        }
-        else if (IsCheatNode && Cheat != null)
+        else if (Cheat != null)
         {
             Editor.Select(SelectionInfo.ForCheat(Game, Folder, Cheat));
+        }
+        else if (Folder != null)
+        {
+            Editor.Select(SelectionInfo.ForFolder(Game, Folder));
         }
     }
 
     private void HandleToggle()
     {
-        if (IsGameNode)
+        if (Folder != null)
         {
-            Editor.ToggleGameExpand(Game);
-        }
-        else if (IsFolderNode && Folder != null)
-        {
-            Editor.ToggleFolderExpand(Folder);
+            Editor.ToggleExpanded(Folder);
         }
     }
-
 }

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
     <PropertyGroup>
-        <Version>1.2.0</Version>
+        <Version>2.0.0</Version>
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -21,12 +21,6 @@
     <ItemGroup>
         <ServiceWorker Include="wwwroot\service-worker.js"
                        PublishedContent="wwwroot\service-worker.published.js"/>
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="Microsoft.Extensions.Hosting.Abstractions">
-        <HintPath>C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\10.0.2\Microsoft.Extensions.Hosting.Abstractions.dll</HintPath>
-      </Reference>
     </ItemGroup>
 
 </Project>

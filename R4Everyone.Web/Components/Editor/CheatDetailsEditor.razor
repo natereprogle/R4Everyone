@@ -1,18 +1,22 @@
-@using System.Text
+@using R4Everyone.Web.Formatting
+@inject EditorState Editor
 @inject IJSRuntime Js
 
 <div class="row g-3">
     <div class="col-12">
         <label class="form-label">Title</label>
-        <input class="form-control" value="@Cheat.Title" @oninput="OnCheatTitleInput"/>
+        <input class="form-control" value="@Cheat.Title"
+               @oninput="e => Editor.UpdateCheatTitle(e.Value?.ToString() ?? string.Empty)"/>
     </div>
     <div class="col-12">
         <label class="form-label">Description</label>
-        <textarea class="form-control" rows="4" @oninput="OnCheatDescriptionInput">@Cheat.Description</textarea>
+        <textarea class="form-control" rows="4"
+                  @oninput="e => Editor.UpdateCheatDescription(e.Value?.ToString() ?? string.Empty)">@Cheat.Description</textarea>
     </div>
     <div class="col-12">
         <div class="form-check">
-            <input class="form-check-input" type="checkbox" checked="@Cheat.Enabled" @onchange="OnCheatEnabledChanged"/>
+            <input class="form-check-input" type="checkbox" checked="@Cheat.Enabled"
+                   @onchange="e => Editor.UpdateCheatEnabled(e.Value is true)"/>
             <label class="form-check-label">Enabled</label>
         </div>
     </div>
@@ -22,19 +26,19 @@
 
 <div class="codes-editor">
     <div class="section-title mb-2">Codes</div>
-    @if (ShowActivatorBanner)
+    @if (Editor.HasActivator(Cheat))
     {
         <div class="activator-notice mb-2">
             This cheat uses an activator! You can edit it here in Codes or with the activator buttons below.
         </div>
     }
-    <textarea class="form-control code-input @(HasRowErrors ? "is-invalid" : string.Empty)" rows="6"
-              value="@_localCheatCodeText" @oninput="HandleCheatCodeInput" spellcheck="false"
-              @ref="_cheatCodeInput"></textarea>
-    @if (HasRowErrors)
+    <textarea class="form-control code-input @(_rowErrors.Count > 0 ? "is-invalid" : string.Empty)" rows="6"
+              value="@_codeText" @oninput="HandleCodeInputAsync" spellcheck="false"
+              @ref="_codeInput"></textarea>
+    @if (_rowErrors.Count > 0)
     {
         <div class="invalid-feedback d-block">
-            @foreach (var message in _rowValidationMessages)
+            @foreach (var message in _rowErrors)
             {
                 <div>@message</div>
             }
@@ -45,7 +49,7 @@
 <hr/>
 
 <div class="activator-editor">
-    <div class="d-flex align-items-center justify-content-between mb-2">
+    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-2">
         <div>
             <div class="section-title mb-0">Activator</div>
             <div class="activator-subtitle">
@@ -55,7 +59,7 @@
         <div class="form-check form-switch mb-0">
             <input class="form-check-input"
                    type="checkbox"
-                   checked="@(CheatActivatorOptions.XyMode == R4Game.XyActivatorMode.ActionReplay)"
+                   checked="@(ActivatorOptions.XyMode == R4Game.XyActivatorMode.ActionReplay)"
                    @onchange="OnActionReplayCompatChanged"/>
             <label class="form-check-label">
                 Action Replay-Compatible
@@ -68,13 +72,13 @@
     <div class="activator-button-grid">
         @foreach (var (button, label) in ActivatorButtons)
         {
-            var state = GetState(button);
+            var state = ActivatorOptions.ButtonStates.GetValueOrDefault(button, R4Game.ActivatorKeyState.Ignore);
             <button type="button"
                     class="activator-tile @GetStateCssClass(state)"
                     @onclick="() => CycleActivatorState(button)"
                     title="Click to cycle: Ignore -> Hold -> Release">
                 <span class="activator-tile-key">@label</span>
-                <span class="activator-tile-state">@GetStateLabel(state)</span>
+                <span class="activator-tile-state">@state</span>
             </button>
         }
     </div>
@@ -85,26 +89,6 @@
 </div>
 
 @code {
-    private ElementReference _cheatCodeInput;
-    private readonly List<string> _rowValidationMessages = [];
-    private string _localCheatCodeText = string.Empty;
-    private bool _pendingSelection;
-    private int _pendingSelectionStart;
-    private int _pendingSelectionEnd;
-    private R4Cheat? _lastCheat;
-
-    [Parameter] public R4Cheat Cheat { get; set; } = null!;
-    [Parameter] public string CheatCodeText { get; set; } = string.Empty;
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatTitleInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
-    [Parameter] public EventCallback<string> OnCheatCodeInput { get; set; }
-    [Parameter] public R4Game.CheatActivatorOptions CheatActivatorOptions { get; set; } = new();
-    [Parameter] public bool ShowActivatorBanner { get; set; }
-    [Parameter] public EventCallback<R4Game.CheatActivatorOptions> OnCheatActivatorOptionsChanged { get; set; }
-
-    private bool HasRowErrors => _rowValidationMessages.Count > 0;
-
     private static readonly (R4Game.ActivatorButton Button, string Label)[] ActivatorButtons =
     [
         (R4Game.ActivatorButton.L, "L"),
@@ -121,421 +105,86 @@
         (R4Game.ActivatorButton.Select, "Select")
     ];
 
+    private ElementReference _codeInput;
+    private List<string> _rowErrors = [];
+    private string _codeText = string.Empty;
+    private R4Cheat? _lastCheat;
+
+    // Set while the textarea holds text the user just typed, so it is not overwritten before the caret is restored.
+    private (int Start, int End)? _pendingSelection;
+
+    [Parameter, EditorRequired] public R4Cheat Cheat { get; set; } = null!;
+
+    private R4Game.CheatActivatorOptions ActivatorOptions => Editor.GetActivatorOptions(Cheat);
+
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(_lastCheat, Cheat))
+        var editorText = Editor.GetCheatCodeText(Cheat);
+        var cheatChanged = !ReferenceEquals(_lastCheat, Cheat);
+        if (cheatChanged || (_pendingSelection == null && !string.Equals(_codeText, editorText, StringComparison.Ordinal)))
         {
             _lastCheat = Cheat;
-            _localCheatCodeText = CheatCodeText;
-            UpdateRowValidation(_localCheatCodeText);
-        }
-        else if (!_pendingSelection && !string.Equals(_localCheatCodeText, CheatCodeText, StringComparison.Ordinal))
-        {
-            _localCheatCodeText = CheatCodeText;
-            UpdateRowValidation(_localCheatCodeText);
+            SetCodeText(editorText);
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_pendingSelection)
-        {
-            _pendingSelection = false;
-            await Js.InvokeVoidAsync("r4eCheatEditor.setSelection", _cheatCodeInput, _pendingSelectionStart,
-                _pendingSelectionEnd);
-        }
-
         if (firstRender)
         {
-            await Js.InvokeVoidAsync("r4eCheatEditor.bindHexFilter", _cheatCodeInput);
+            await Js.InvokeVoidAsync("r4eCheatEditor.bindHexFilter", _codeInput);
+        }
+
+        if (_pendingSelection is var (start, end))
+        {
+            _pendingSelection = null;
+            await Js.InvokeVoidAsync("r4eCheatEditor.setSelection", _codeInput, start, end);
         }
     }
 
-    private async Task HandleCheatCodeInput(ChangeEventArgs args)
+    private async Task HandleCodeInputAsync(ChangeEventArgs args)
     {
         var raw = args.Value?.ToString() ?? string.Empty;
-        var state = await Js.InvokeAsync<CheatEditorSelection>("r4eCheatEditor.getState", _cheatCodeInput);
-        var caretStart = state.Start;
-        var caretEnd = state.End;
-        raw = NormalizeLineEndings(raw, ref caretStart, ref caretEnd);
+        var selection = await Js.InvokeAsync<TextSelection>("r4eCheatEditor.getSelection", _codeInput);
+        var formatted = CheatCodeText.Format(raw, selection.Start, selection.End);
 
-        var formatted = FormatCheatText(raw, caretStart, caretEnd, out var newStart, out var newEnd);
-
-        _localCheatCodeText = formatted;
-        _pendingSelection = true;
-        _pendingSelectionStart = newStart;
-        _pendingSelectionEnd = newEnd;
-        UpdateRowValidation(formatted);
-
-        await OnCheatCodeInput.InvokeAsync(formatted);
+        SetCodeText(formatted.Text);
+        _pendingSelection = (formatted.SelectionStart, formatted.SelectionEnd);
+        Editor.UpdateCheatCodeText(formatted.Text);
     }
 
-    private static string NormalizeLineEndings(string input, ref int caretStart, ref int caretEnd)
+    private void SetCodeText(string text)
     {
-        if (!input.Contains('\r'))
-        {
-            return input;
-        }
-
-        var builder = new StringBuilder(input.Length);
-        var start = caretStart;
-        var end = caretEnd;
-
-        for (var i = 0; i < input.Length; i++)
-        {
-            var ch = input[i];
-            if (ch == '\r')
-            {
-                if (i < start) start--;
-                if (i < end) end--;
-                continue;
-            }
-
-            builder.Append(ch);
-        }
-
-        caretStart = Math.Max(0, start);
-        caretEnd = Math.Max(0, end);
-        return builder.ToString();
+        _codeText = text;
+        _rowErrors = CheatCodeText.GetRowErrors(text);
     }
 
-    private static string FormatCheatText(string input, int caretStart, int caretEnd, out int newStart, out int newEnd)
+    private void OnActionReplayCompatChanged(ChangeEventArgs args)
     {
-        if (!string.IsNullOrEmpty(input))
-            return input.Contains('\n')
-                ? FormatLineBased(input, caretStart, caretEnd, out newStart, out newEnd)
-                : FormatGlobal(input, caretStart, caretEnd, out newStart, out newEnd);
-        newStart = 0;
-        newEnd = 0;
-        return string.Empty;
+        var xyMode = args.Value is true ? R4Game.XyActivatorMode.ActionReplay : R4Game.XyActivatorMode.Standard;
+        Editor.UpdateActivatorOptions(new R4Game.CheatActivatorOptions(ActivatorOptions.ButtonStates, xyMode));
     }
 
-    private static string FormatLineBased(string input, int caretStart, int caretEnd, out int newStart, out int newEnd)
+    private void CycleActivatorState(R4Game.ActivatorButton button)
     {
-        var lines = input.Split('\n');
-        var builder = new StringBuilder();
-        var inputOffset = 0;
-        newStart = 0;
-        newEnd = 0;
-        var startSet = false;
-        var endSet = false;
-
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i];
-            var lineStart = inputOffset;
-            var lineEnd = lineStart + line.Length;
-            var formattedLine = FormatLine(line);
-
-            if (!startSet && caretStart >= lineStart && caretStart <= lineEnd)
-            {
-                var caretInLine = Math.Clamp(caretStart - lineStart, 0, line.Length);
-                var hexBefore = CountHex(line, caretInLine);
-                newStart = builder.Length + GetFormattedPositionForHexCount(formattedLine, hexBefore);
-                startSet = true;
-            }
-
-            if (!endSet && caretEnd >= lineStart && caretEnd <= lineEnd)
-            {
-                var caretInLine = Math.Clamp(caretEnd - lineStart, 0, line.Length);
-                var hexBefore = CountHex(line, caretInLine);
-                newEnd = builder.Length + GetFormattedPositionForHexCount(formattedLine, hexBefore);
-                endSet = true;
-            }
-
-            builder.Append(formattedLine);
-            if (i < lines.Length - 1)
-            {
-                builder.Append('\n');
-            }
-
-            inputOffset += line.Length + 1;
-        }
-
-        if (!startSet) newStart = builder.Length;
-        if (!endSet) newEnd = builder.Length;
-        return builder.ToString();
-    }
-
-    private static string FormatGlobal(string input, int caretStart, int caretEnd, out int newStart, out int newEnd)
-    {
-        var hexChars = input.Where(IsHexChar).Select(char.ToUpperInvariant).ToArray();
-        if (hexChars.Length == 0)
-        {
-            newStart = 0;
-            newEnd = 0;
-            return string.Empty;
-        }
-
-        var chunks = SplitIntoChunks(hexChars);
-        var formatted = FormatChunks(chunks);
-        var hexBeforeStart = CountHex(input, Math.Clamp(caretStart, 0, input.Length));
-        var hexBeforeEnd = CountHex(input, Math.Clamp(caretEnd, 0, input.Length));
-        newStart = GetFormattedPositionForHexCount(formatted, hexBeforeStart);
-        newEnd = GetFormattedPositionForHexCount(formatted, hexBeforeEnd);
-        return formatted;
-    }
-
-    private static string FormatLine(string line)
-    {
-        var hexChars = line.Where(IsHexChar).Select(char.ToUpperInvariant).ToArray();
-        if (hexChars.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var chunks = SplitIntoChunks(hexChars);
-        return FormatChunks(chunks);
-    }
-
-    private static List<string> SplitIntoChunks(char[] hexChars)
-    {
-        var chunks = new List<string>();
-        for (var i = 0; i < hexChars.Length; i += 8)
-        {
-            var length = Math.Min(8, hexChars.Length - i);
-            chunks.Add(new string(hexChars, i, length));
-        }
-
-        return chunks;
-    }
-
-    private static string FormatChunks(List<string> chunks)
-    {
-        if (chunks.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var rows = new List<string>();
-        for (var i = 0; i < chunks.Count; i += 2)
-        {
-            var first = chunks[i];
-            var second = i + 1 < chunks.Count ? chunks[i + 1] : string.Empty;
-            rows.Add(string.IsNullOrEmpty(second) ? first : $"{first} {second}");
-        }
-
-        return string.Join('\n', rows);
-    }
-
-    private static int CountHex(string input, int length)
-    {
-        var count = 0;
-        for (var i = 0; i < length && i < input.Length; i++)
-        {
-            if (IsHexChar(input[i]))
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static int GetFormattedPositionForHexCount(string formatted, int hexCount)
-    {
-        if (hexCount <= 0)
-        {
-            return 0;
-        }
-
-        var count = 0;
-        for (var i = 0; i < formatted.Length; i++)
-        {
-            if (!IsHexChar(formatted[i]))
-            {
-                continue;
-            }
-
-            count++;
-            if (count == hexCount)
-            {
-                return i + 1;
-            }
-        }
-
-        return formatted.Length;
-    }
-
-    private void UpdateRowValidation(string text)
-    {
-        _rowValidationMessages.Clear();
-        var lines = text.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i].Trim();
-            if (line.Length == 0)
-            {
-                continue;
-            }
-
-            var chunks = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (chunks.Length != 2 || !IsValidChunk(chunks[0]) || !IsValidChunk(chunks[1]))
-            {
-                _rowValidationMessages.Add($"Row {i + 1} must contain 2 blocks of 8 hex characters.");
-            }
-        }
-    }
-
-    private static bool IsValidChunk(string chunk)
-    {
-        return chunk.Length == 8 && chunk.All(IsHexChar);
-    }
-
-    private static bool IsHexChar(char ch)
-    {
-        return ch is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
-    }
-
-    private sealed class CheatEditorSelection
-    {
-        public int Start { get; init; }
-        public int End { get; init; }
-    }
-
-    private async Task OnActionReplayCompatChanged(ChangeEventArgs args)
-    {
-        var xyMode = args.Value is bool and true
-            ? R4Game.XyActivatorMode.ActionReplay
-            : R4Game.XyActivatorMode.Standard;
-
-        await OnCheatActivatorOptionsChanged.InvokeAsync(
-            new R4Game.CheatActivatorOptions(CloneStates(), xyMode));
-    }
-
-    private async Task CycleActivatorState(R4Game.ActivatorButton button)
-    {
-        var next = CloneStates();
-        next[button] = next[button] switch
+        var current = ActivatorOptions;
+        var states = current.ButtonStates.ToDictionary();
+        states[button] = states.GetValueOrDefault(button) switch
         {
             R4Game.ActivatorKeyState.Ignore => R4Game.ActivatorKeyState.Hold,
             R4Game.ActivatorKeyState.Hold => R4Game.ActivatorKeyState.Release,
             _ => R4Game.ActivatorKeyState.Ignore
         };
 
-        await OnCheatActivatorOptionsChanged.InvokeAsync(
-            new R4Game.CheatActivatorOptions(next, CheatActivatorOptions.XyMode));
+        Editor.UpdateActivatorOptions(new R4Game.CheatActivatorOptions(states, current.XyMode));
     }
 
-    private R4Game.ActivatorKeyState GetState(R4Game.ActivatorButton button)
+    private static string GetStateCssClass(R4Game.ActivatorKeyState state) => state switch
     {
-        return CheatActivatorOptions.ButtonStates.TryGetValue(button, out var state)
-            ? state
-            : R4Game.ActivatorKeyState.Ignore;
-    }
+        R4Game.ActivatorKeyState.Hold => "is-hold",
+        R4Game.ActivatorKeyState.Release => "is-release",
+        _ => "is-ignore"
+    };
 
-    private Dictionary<R4Game.ActivatorButton, R4Game.ActivatorKeyState> CloneStates()
-    {
-        var states = R4Game.CreateDefaultButtonStates();
-        foreach (var (button, state) in CheatActivatorOptions.ButtonStates)
-        {
-            states[button] = state;
-        }
-
-        return states;
-    }
-
-    private static string GetStateLabel(R4Game.ActivatorKeyState state)
-    {
-        return state switch
-        {
-            R4Game.ActivatorKeyState.Hold => "Hold",
-            R4Game.ActivatorKeyState.Release => "Release",
-            _ => "Ignore"
-        };
-    }
-
-    private static string GetStateCssClass(R4Game.ActivatorKeyState state)
-    {
-        return state switch
-        {
-            R4Game.ActivatorKeyState.Hold => "is-hold",
-            R4Game.ActivatorKeyState.Release => "is-release",
-            _ => "is-ignore"
-        };
-    }
+    private sealed record TextSelection(int Start, int End);
 }
-
-<!-- Some CSS tags in here are used via the GetStateCssClass method above, so they display as "unused" but are not -->
-<!--suppress CssUnusedSymbol -->
-<style>
-    .activator-notice {
-        font-size: 0.85rem;
-        border: 1px solid var(--border-color);
-        background: var(--highlight);
-        border-radius: 0.4rem;
-        padding: 0.4rem 0.55rem;
-        color: var(--text-color);
-    }
-
-    .activator-button-grid {
-        display: grid;
-        grid-template-columns: repeat(6, minmax(64px, 1fr));
-        gap: 0.5rem;
-    }
-
-    .activator-tile {
-        border: 1px solid var(--border-color);
-        border-radius: 0.5rem;
-        background: var(--panel-bg);
-        color: var(--text-color);
-        padding: 0.45rem 0.4rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.12rem;
-        min-height: 56px;
-    }
-
-    .activator-tile-key {
-        font-size: 0.9rem;
-        font-weight: 700;
-        line-height: 1;
-    }
-
-    .activator-tile-state {
-        font-size: 0.72rem;
-        line-height: 1;
-    }
-
-    .activator-tile.is-ignore {
-        opacity: 0.7;
-    }
-
-    .activator-tile.is-hold {
-        border-color: #2c7a4b;
-        background: color-mix(in srgb, #2c7a4b 13%, var(--panel-bg));
-    }
-
-    .activator-tile.is-release {
-        border-color: #9c3f3f;
-        background: color-mix(in srgb, #9c3f3f 13%, var(--panel-bg));
-    }
-
-    .activator-legend {
-        margin-top: 0.5rem;
-        font-size: 0.8rem;
-        color: var(--muted-text);
-    }
-
-    .activator-subtitle {
-        margin-top: 0.2rem;
-        font-size: 0.82rem;
-        color: var(--muted-text);
-        max-width: 40rem;
-        line-height: 1.25;
-    }
-
-    @@media (max-width: 1200px) {
-        .activator-button-grid {
-            grid-template-columns: repeat(4, minmax(64px, 1fr));
-        }
-    }
-
-    @@media (max-width: 780px) {
-        .activator-button-grid {
-            grid-template-columns: repeat(3, minmax(64px, 1fr));
-        }
-    }
-</style>

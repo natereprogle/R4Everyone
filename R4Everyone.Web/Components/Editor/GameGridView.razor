@@ -1,8 +1,11 @@
+@implements IAsyncDisposable
+@inject CoverArtService CoverArt
+@inject EditorState Editor
 @inject IJSRuntime Js
-@implements IDisposable
+@inject ILogger<GameGridView> Logger
 
-<div class="game-grid">
-    @if (Games == null || Games.Count == 0)
+<div class="game-grid" @ref="_grid">
+    @if (Games.Count == 0)
     {
         <div class="empty-state">No games yet. Create or open a file to begin.</div>
     }
@@ -12,160 +15,195 @@
         {
             var title = EditorState.GetGameDisplayTitle(game);
             var gameId = game.GameId;
-            var imageUrl = GetImageUrl(gameId);
-            var isFailed = IsFailed(gameId);
-            var imageSrc = isFailed ? "assets/failed_cover_fetch.webp" : imageUrl;
-            var isLoading = IsLoading(gameId);
-            <button type="button" class="game-tile" data-game-id="@gameId"
-                    @onclick="() => OnGameSelected.InvokeAsync(game)">
-                <div class="game-image-frame">
-                    @if (!string.IsNullOrWhiteSpace(imageUrl))
-                    {
-                        <!--suppress HtmlDeprecatedAttribute -->
-                        <img class="game-tile-image @(isLoading ? "loading" : "")" src="@imageSrc"
-                             alt="@title" @onload="() => OnImageLoaded(gameId)" @onerror="() => OnImageError(gameId)"/>
-                    }
-                    else
-                    {
-                        <img class="game-tile-image @(isLoading ? "loading" : "")" src="assets/unknown_game_cover.webp"
-                             alt="Unknown cover art"/>
-                    }
-                    @if (isLoading)
-                    {
-                        <div class="game-image-loading-bar"></div>
-                    }
-                </div>
-                <div class="game-tile-body">
-                    <div class="game-tile-title">@title</div>
-                    @if (!string.IsNullOrWhiteSpace(game.GameId))
-                    {
-                        <div class="game-tile-subtitle">@game.GameId</div>
-                    }
-                </div>
-            </button>
+            var cover = GetCover(gameId);
+            var isLoading = cover is { IsLoading: true };
+            var nodeId = Editor.GetNodeId(game);
+            <div @key="game" class="game-tile" data-game-id="@gameId" data-drag-id="@nodeId" data-drop-id="@nodeId"
+                 data-drag-kind="game">
+                <button type="button" class="game-tile-open" @onclick="() => OnGameSelected.InvokeAsync(game)">
+                    <div class="game-image-frame">
+                        @if (cover is { HasError: true })
+                        {
+                            <img class="game-tile-image" src="@FailedCoverPath" alt="@title"/>
+                        }
+                        else if (!string.IsNullOrEmpty(cover?.Url))
+                        {
+                            <img class="game-tile-image @(isLoading ? "loading" : "")" src="@cover.Url" alt="@title"
+                                 @onload="() => OnImageLoaded(cover)" @onerror="() => OnImageError(cover)"/>
+                        }
+                        else
+                        {
+                            <img class="game-tile-image @(isLoading ? "loading" : "")" src="@UnknownCoverPath"
+                                 alt="Unknown cover art"/>
+                        }
+                        @if (isLoading)
+                        {
+                            <div class="game-image-loading-bar"></div>
+                        }
+                    </div>
+                    <div class="game-tile-body">
+                        <div class="game-tile-title">@title</div>
+                        @if (!string.IsNullOrWhiteSpace(gameId))
+                        {
+                            <div class="game-tile-subtitle">@gameId</div>
+                        }
+                    </div>
+                </button>
+                <DragHandle Label="@title" Class="game-drag-handle"/>
+            </div>
         }
     }
 </div>
 
 @code {
-    [Parameter] public IReadOnlyList<R4Game>? Games { get; set; }
-    [Parameter] public EventCallback<R4Game> OnGameSelected { get; set; }
-    [Parameter] public Func<R4Game, Task<string?>>? ImageUrlSelector { get; set; }
-    private readonly Dictionary<string, ImageRequestState> _imageTasks = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, R4Game> _gamesById = new(StringComparer.OrdinalIgnoreCase);
+    private const string FailedCoverPath = "assets/failed_cover_fetch.webp";
+    private const string UnknownCoverPath = "assets/unknown_game_cover.webp";
+
+    // Stop showing the loading bar if the browser never reports the image as loaded or failed.
+    private static readonly TimeSpan ImageLoadTimeout = TimeSpan.FromSeconds(10);
+
+    private readonly Dictionary<string, CoverState> _covers = new(StringComparer.OrdinalIgnoreCase);
     private DotNetObjectReference<GameGridView>? _dotNetRef;
+    private ElementReference _grid;
 
-    protected override async Task OnParametersSetAsync()
+    [Parameter] public IReadOnlyList<R4Game> Games { get; set; } = [];
+    [Parameter] public EventCallback<R4Game> OnGameSelected { get; set; }
+
+    protected override void OnParametersSet()
     {
-        if (Games == null || ImageUrlSelector == null)
+        // Forget covers for games that are no longer in the list, so they are fetched again if re-added.
+        var currentIds = Games
+            .Select(game => game.GameId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var gameId in _covers.Keys.Where(id => !currentIds.Contains(id)).ToList())
         {
-            _imageTasks.Clear();
-            _gamesById.Clear();
-            return;
+            _covers.Remove(gameId);
         }
-
-        _gamesById.Clear();
-        foreach (var game in Games)
-        {
-            if (string.IsNullOrWhiteSpace(game.GameId))
-                continue;
-
-            _gamesById[game.GameId] = game;
-        }
-
-        var currentIds = new HashSet<string>(_gamesById.Keys, StringComparer.OrdinalIgnoreCase);
-        foreach (var gameId in _imageTasks.Keys.ToList().Where(gameId => !currentIds.Contains(gameId)))
-            _imageTasks.Remove(gameId);
-
-        await Task.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         _dotNetRef ??= DotNetObjectReference.Create(this);
+        if (firstRender)
+        {
+            await Js.InvokeVoidAsync("r4eDragDrop.attach", _grid, _dotNetRef, new { axis = "x" });
+        }
+
         await Js.InvokeVoidAsync("r4eLazyImages.observeAll", _dotNetRef);
     }
 
+    /// <summary>
+    /// Called from JS when a game tile is dropped on another.
+    /// </summary>
     [JSInvokable]
-    public Task NotifyVisible(string gameId)
+    public void OnDrop(int sourceId, int targetId, string position)
     {
-        if (string.IsNullOrWhiteSpace(gameId) || _imageTasks.ContainsKey(gameId) || !_gamesById.TryGetValue(gameId, out var game))
-            return Task.CompletedTask;
-
-        _imageTasks[gameId] = new ImageRequestState(LoadImageAsync(game));
-        return InvokeAsync(StateHasChanged);
+        if (Editor.FindNode(sourceId) is R4Game game && Editor.FindNode(targetId) is R4Game target &&
+            Enum.TryParse<DropPosition>(position, ignoreCase: true, out var dropPosition))
+        {
+            Editor.MoveGame(game, target, dropPosition);
+        }
     }
 
-    private async Task<string?> LoadImageAsync(R4Game game)
+    /// <summary>
+    /// Called from JS when an arrow key is pressed on a tile's drag handle.
+    /// </summary>
+    [JSInvokable]
+    public void OnKeyboardMove(int id, int offset)
     {
-        if (ImageUrlSelector == null) return null;
-
-        _ = Task.Delay(TimeSpan.FromSeconds(10)).ContinueWith(_ => InvokeAsync(StateHasChanged));
-        var url = await ImageUrlSelector(game);
-        await InvokeAsync(StateHasChanged);
-        return url;
+        if (Editor.FindNode(id) is R4Game game)
+        {
+            Editor.MoveGameBy(game, offset);
+        }
     }
 
-    private string? GetImageUrl(string? gameId)
+    /// <summary>
+    /// Called from JS when a tile scrolls into view, to start loading its cover art.
+    /// </summary>
+    [JSInvokable]
+    public void NotifyVisible(string gameId)
     {
-        if (string.IsNullOrWhiteSpace(gameId))
-            return null;
+        if (string.IsNullOrWhiteSpace(gameId) || _covers.ContainsKey(gameId))
+        {
+            return;
+        }
 
-        if (_imageTasks.TryGetValue(gameId, out var entry) && entry.Task.IsCompletedSuccessfully)
-            return entry.Task.Result;
-
-        return null;
+        var cover = new CoverState();
+        _covers[gameId] = cover;
+        StateHasChanged();
+        _ = LoadCoverAsync(gameId, cover);
     }
 
-    private bool IsFailed(string? gameId)
+    // Never throws: failures are logged and shown as the "failed" placeholder.
+    private async Task LoadCoverAsync(string gameId, CoverState cover)
     {
-        if (string.IsNullOrWhiteSpace(gameId))
-            return false;
+        try
+        {
+            cover.Url = await CoverArt.FindCoverUrlAsync(gameId);
+            if (string.IsNullOrEmpty(cover.Url))
+            {
+                cover.IsLoaded = true;
+            }
 
-        return _imageTasks.TryGetValue(gameId, out var entry) && entry.HasError;
+            await InvokeAsync(StateHasChanged);
+            if (cover.IsLoaded)
+            {
+                return;
+            }
+
+            await Task.Delay(ImageLoadTimeout);
+            if (!cover.IsLoaded)
+            {
+                cover.IsLoaded = true;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not load cover art for game {GameId}.", gameId);
+            cover.HasError = true;
+            cover.IsLoaded = true;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
-    private bool IsLoading(string? gameId)
+    private CoverState? GetCover(string? gameId) =>
+        !string.IsNullOrWhiteSpace(gameId) && _covers.TryGetValue(gameId, out var cover) ? cover : null;
+
+    private static void OnImageLoaded(CoverState cover)
     {
-        if (string.IsNullOrWhiteSpace(gameId))
-            return false;
-
-        if (!_imageTasks.TryGetValue(gameId, out var entry))
-            return false;
-
-        return !entry.IsLoaded && DateTime.UtcNow - entry.StartedAt < TimeSpan.FromSeconds(10);
+        cover.IsLoaded = true;
     }
 
-    private Task OnImageLoaded(string gameId)
+    private void OnImageError(CoverState cover)
     {
-        if (string.IsNullOrWhiteSpace(gameId) || !_imageTasks.TryGetValue(gameId, out var entry) || entry.IsLoaded)
-            return Task.CompletedTask;
-
-        entry.IsLoaded = true;
-        return InvokeAsync(StateHasChanged);
+        Logger.LogWarning("Cover image {Url} failed to display.", cover.Url);
+        cover.HasError = true;
+        cover.IsLoaded = true;
     }
 
-    private Task OnImageError(string gameId)
+    public async ValueTask DisposeAsync()
     {
-        if (string.IsNullOrWhiteSpace(gameId) || !_imageTasks.TryGetValue(gameId, out var entry) || entry.HasError)
-            return Task.CompletedTask;
+        try
+        {
+            await Js.InvokeVoidAsync("r4eLazyImages.disconnect");
+            await Js.InvokeVoidAsync("r4eDragDrop.detach", _grid);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Could not stop observing or dragging game tiles.");
+        }
 
-        entry.HasError = true;
-        entry.IsLoaded = true;
-        return InvokeAsync(StateHasChanged);
-    }
-
-    private sealed class ImageRequestState(Task<string?> task)
-    {
-        public Task<string?> Task { get; } = task;
-        public DateTime StartedAt { get; } = DateTime.UtcNow;
-        public bool IsLoaded { get; set; }
-        public bool HasError { get; set; }
-    }
-
-    public void Dispose()
-    {
         _dotNetRef?.Dispose();
     }
 
+    private sealed class CoverState
+    {
+        public string? Url { get; set; }
+        public bool IsLoaded { get; set; }
+        public bool HasError { get; set; }
+        public bool IsLoading => !IsLoaded;
+    }
 }

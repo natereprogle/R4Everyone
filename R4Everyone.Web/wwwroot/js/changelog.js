@@ -1,17 +1,22 @@
-window.r4eChangelog = window.r4eChangelog || {};
+window.r4eChangelog = (() => {
+    const storageKey = "r4e-changelog-version";
 
-window.r4eChangelog.getSeenVersion = function () {
-    try {
-        return localStorage.getItem("r4e-changelog-version") || "";
-    } catch (error) {
-        return "";
-    }
-};
+    const getSeenVersion = () => {
+        try {
+            return localStorage.getItem(storageKey) || "";
+        } catch (error) {
+            console.warn("R4Everyone: could not read the last seen changelog version.", error);
+            return "";
+        }
+    };
 
-window.r4eChangelog.setSeenVersion = function (version) {
-    try {
-        localStorage.setItem("r4e-changelog-version", version || "");
-    } catch (error) {
-        // Ignore storage errors.
-    }
-};
+    const setSeenVersion = (version) => {
+        try {
+            localStorage.setItem(storageKey, version || "");
+        } catch (error) {
+            console.warn("R4Everyone: could not save the last seen changelog version.", error);
+        }
+    };
+
+    return { getSeenVersion, setSeenVersion };
+})();

@@ -14,7 +14,7 @@
                     document.documentElement.setAttribute("data-theme", preference);
                 }
             } catch (error) {
-                // Ignore storage errors.
+                console.warn("R4Everyone: could not read the theme preference.", error);
             }
         })();
     </script>
@@ -25,7 +25,6 @@
     <link href="manifest.webmanifest" rel="manifest"/>
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png"/>
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png"/>
-    <!--    <link href="R4Everyone.Web.styles.css" rel="stylesheet" />-->
     <script type="importmap"></script>
 </head>
 
@@ -39,16 +38,26 @@
     </div>
 </div>
 
-<script src="js/viewport.js"></script>
-<script src="js/download.js"></script>
+<div id="blazor-error-ui" role="alert">
+    Something went wrong and R4Everyone needs to be reloaded. Unsaved changes may be lost.
+    <a href="." class="reload">Reload</a>
+    <button type="button" class="dismiss" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="js/files.js"></script>
 <script src="js/lazy-images.js"></script>
-<script src="js/image-check.js"></script>
+<script src="js/images.js"></script>
 <script src="js/cheat-editor.js"></script>
+<script src="js/shortcuts.js"></script>
+<script src="js/drag-drop.js"></script>
 <script src="js/changelog.js"></script>
 <script src="js/theme.js"></script>
 <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 <script>
-    navigator.serviceWorker.register('service-worker.js', {updateViaCache: 'none'});
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("service-worker.js", {updateViaCache: "none"})
+            .catch((error) => console.error("R4Everyone: service worker registration failed.", error));
+    }
 </script>
 </body>
 

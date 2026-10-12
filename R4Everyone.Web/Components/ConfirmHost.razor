@@ -1,0 +1,67 @@
+@implements IDisposable
+@inject ConfirmService Confirm
+
+@if (Confirm.Current is { } request)
+{
+    <div class="prompt-backdrop" @onclick="() => Confirm.Respond(false)" @onkeydown="HandleKeyDown">
+        <div class="prompt-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
+             aria-describedby="confirm-message" @onclick:stopPropagation="true">
+            <div class="prompt-header">
+                <div class="modal-title" id="confirm-title">@request.Title</div>
+            </div>
+            <div class="prompt-body">
+                <p class="mb-0" id="confirm-message">@request.Message</p>
+            </div>
+            <div class="prompt-footer">
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => Confirm.Respond(false)"
+                        @ref="_cancelButton">Cancel
+                </button>
+                <button type="button" class="btn @(request.IsDestructive ? "btn-danger" : "btn-primary")"
+                        @onclick="() => Confirm.Respond(true)">@request.ConfirmLabel
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private ElementReference _cancelButton;
+    private ConfirmRequest? _focusedRequest;
+
+    protected override void OnInitialized()
+    {
+        Confirm.Changed += HandleChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Focus Cancel when a dialog opens, so Enter does not confirm a destructive action by accident.
+        if (Confirm.Current is { } request && !ReferenceEquals(request, _focusedRequest))
+        {
+            _focusedRequest = request;
+            await _cancelButton.FocusAsync();
+        }
+        else if (Confirm.Current == null)
+        {
+            _focusedRequest = null;
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            Confirm.Respond(false);
+        }
+    }
+
+    private void HandleChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Confirm.Changed -= HandleChanged;
+    }
+}

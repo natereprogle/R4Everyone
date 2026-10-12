@@ -11,6 +11,90 @@
             </div>
             <div class="changelog-body">
                 <div class="changelog-section">
+                    <h4>Version 2.0.0</h4>
+                    <div class="changelog-section">
+                        <h6>New Features</h6>
+                        <ul>
+                            <li><strong>Undo and redo.</strong> Use the Undo and Redo buttons (also in the game
+                                editor), or press <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo and <kbd>Ctrl</kbd>+<kbd>Y</kbd>
+                                or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> to redo (<kbd>Cmd</kbd> on macOS).
+                                Typing in one field counts as a single step, and the last 100 steps are kept. Undoing
+                                back to your last save clears the "Unsaved changes" badge.
+                            </li>
+                            <li><strong>Drag and drop.</strong> Drag the grip next to a folder or cheat to reorder it,
+                                or drop a cheat on a folder to move it inside. Game tiles can be dragged to reorder
+                                games. It works with a mouse, touch, or pen, and with the keyboard: focus a grip and
+                                use the arrow keys.
+                            </li>
+                            <li><strong>Sorting.</strong> Sort a folder or the top level A–Z (folders first), or sort
+                                all games A–Z. A cheat can also be moved with the "Move cheat to…" list.
+                            </li>
+                            <li><strong>XML import and export.</strong> Export the open file as codelist XML, the
+                                format used by melonDS-style tools, or import one. Exports also include enabled states,
+                                One Hot, and master codes, so they import back into R4Everyone without losing anything.
+                                Importing replaces the open file, and duplicate games in the XML are merged.
+                            </li>
+                            <li><strong>Confirmations.</strong> R4Everyone now asks before removing a game, a cheat, or
+                                a folder that has content (empty folders are removed straight away), and before New,
+                                Open, or Import discards unsaved changes.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="changelog-section">
+                        <h6>General</h6>
+                        <ul>
+                            <li>R4Everyone now works on phones and tablets! The "Desktop required" screen has been
+                                removed.
+                            </li>
+                            <li>On smaller screens, the File Controls and Actions panels become a toolbar above the
+                                game grid.
+                            </li>
+                            <li>Errors are no longer silent. If a file can't be opened or saved, or a ROM can't be
+                                read, you'll see a message explaining what went wrong.
+                            </li>
+                            <li>If something unexpected breaks, R4Everyone shows an error screen instead of
+                                freezing. Your open file stays loaded.
+                            </li>
+                            <li>If cover art can't be loaded, a warning is shown instead of failing quietly.</li>
+                            <li>Notifications have been restyled to match the rest of the app in light and dark mode.
+                            </li>
+                            <li>Files with a blank (<code>00 00 00 00</code>) or unrecognized encoding marker, which
+                                some online cheat databases use, can now be opened. R4Everyone asks which encoding to
+                                use (UTF-8, GBK, Big5, or Shift-JIS), and saving writes the corrected marker.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="changelog-section">
+                        <h6>Editor</h6>
+                        <ul>
+                            <li>On phones, the game editor opens full-screen with <strong>Cheats</strong>,
+                                <strong>Game</strong>, and <strong>Item</strong> tabs. Selecting a folder or cheat
+                                switches to the Item tab automatically.
+                            </li>
+                            <li>Clicking a selected folder or cheat again now selects the game, instead of leaving
+                                game details uneditable.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="changelog-section">
+                        <h6>Fixes</h6>
+                        <ul>
+                            <li>New files are now saved as <code>cheats.dat</code> instead of <code>(new)</code>.</li>
+                            <li>New files are now marked as UTF-8 instead of GBK. R4Everyone always writes text as
+                                UTF-8, so non-English titles in new files could show up garbled on an R4 cart.
+                            </li>
+                            <li>Calculating the Game ID and Checksum from a ROM now always reads the full header,
+                                fixing occasional incorrect checksums.
+                            </li>
+                            <li>Turning off One Hot no longer disables cheats in the folder.</li>
+                            <li>A game's checksum is now required. Games without one are flagged by the validator,
+                                instead of the file failing with an error when you try to save.
+                            </li>
+                            <li>Games without cover art no longer show a loading bar for 10 seconds.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="changelog-section">
                     <h4>Version 1.2.0</h4>
                     <div class="changelog-section">
                         <h6>Editor</h6>

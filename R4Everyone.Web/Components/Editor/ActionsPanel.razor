@@ -2,13 +2,24 @@
     <div class="card-header">Actions</div>
     <div class="card-body panel-body">
         <div class="action-grid">
+            <div class="button-pair">
+                <button class="btn btn-outline-secondary" @onclick="OnUndo" disabled="@(!CanUndo)"
+                        title="Undo (Ctrl+Z)">Undo
+                </button>
+                <button class="btn btn-outline-secondary" @onclick="OnRedo" disabled="@(!CanRedo)"
+                        title="Redo (Ctrl+Y or Ctrl+Shift+Z)">Redo
+                </button>
+            </div>
             <button class="btn btn-success" @onclick="OnAddGame">Add Game</button>
-            <button class="btn btn-danger" @onclick="OnRemoveGame" disabled="@(!CanRemoveGame)">Remove Last Edited
-                Game
+            <button class="btn btn-outline-secondary" @onclick="OnSortGames" disabled="@(!CanSortGames)">
+                Sort Games A–Z
+            </button>
+            <button class="btn btn-danger" @onclick="OnRemoveGame" disabled="@(!CanRemoveGame)">
+                Remove Last Edited Game
             </button>
         </div>
 
-        @if (!IsValid)
+        @if (Errors.Count > 0)
         {
             <div class="validation-list">
                 <div class="section-title">Validation</div>
@@ -24,11 +35,15 @@
 </div>
 
 @code {
-    [Parameter] public bool CanAddGame { get; set; }
+    [Parameter] public bool CanUndo { get; set; }
+    [Parameter] public bool CanRedo { get; set; }
+    [Parameter] public bool CanSortGames { get; set; }
     [Parameter] public bool CanRemoveGame { get; set; }
-    [Parameter] public bool IsValid { get; set; }
     [Parameter] public IReadOnlyList<string> Errors { get; set; } = [];
 
+    [Parameter] public EventCallback OnUndo { get; set; }
+    [Parameter] public EventCallback OnRedo { get; set; }
     [Parameter] public EventCallback OnAddGame { get; set; }
+    [Parameter] public EventCallback OnSortGames { get; set; }
     [Parameter] public EventCallback OnRemoveGame { get; set; }
 }

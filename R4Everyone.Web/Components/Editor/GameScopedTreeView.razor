@@ -1,6 +1,10 @@
+@implements IAsyncDisposable
 @inject EditorState Editor
+@inject EditorCommands Commands
+@inject IJSRuntime Js
+@inject ILogger<GameScopedTreeView> Logger
 
-<div class="game-scoped-tree" @onclick="HandleBlankClick">
+<div class="game-scoped-tree" @onclick="HandleBlankClick" @ref="_tree">
     @if (Game == null || Game.Items.Count == 0)
     {
         <div class="text-muted small">No folders or cheats yet.</div>
@@ -12,10 +16,10 @@
             switch (item)
             {
                 case R4Folder folder:
-                    <TreeNode Game="Game" Folder="folder" Level="0" />
+                    <TreeNode @key="item" Game="Game" Container="Game" Folder="folder" Level="0"/>
                     break;
                 case R4Cheat cheat:
-                    <TreeNode Game="Game" Cheat="cheat" Level="0" />
+                    <TreeNode @key="item" Game="Game" Container="Game" Cheat="cheat" Level="0"/>
                     break;
             }
         }
@@ -23,15 +27,64 @@
 </div>
 
 @code {
+    private ElementReference _tree;
+    private DotNetObjectReference<GameScopedTreeView>? _dotNetRef;
+
     [Parameter] public R4Game? Game { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await Js.InvokeVoidAsync("r4eDragDrop.attach", _tree, _dotNetRef, new { axis = "y" });
+        }
+    }
+
+    /// <summary>
+    /// Called from JS when a folder or cheat is dropped.
+    /// </summary>
+    [JSInvokable]
+    public void OnDrop(int sourceId, int targetId, string position)
+    {
+        if (Game != null && Editor.FindNode(sourceId) is IR4Item item && Editor.FindNode(targetId) is IR4Item target &&
+            Enum.TryParse<DropPosition>(position, ignoreCase: true, out var dropPosition))
+        {
+            Commands.MoveItem(Game, item, target, dropPosition);
+        }
+    }
+
+    /// <summary>
+    /// Called from JS when an arrow key is pressed on a drag handle.
+    /// </summary>
+    [JSInvokable]
+    public void OnKeyboardMove(int id, int offset)
+    {
+        if (Game != null && Editor.FindNode(id) is IR4Item item)
+        {
+            Commands.MoveItemBy(Game, item, offset);
+        }
+    }
 
     private void HandleBlankClick()
     {
-        if (Game == null)
+        if (Game != null)
         {
-            return;
+            Editor.Select(SelectionInfo.ForGame(Game));
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("r4eDragDrop.detach", _tree);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Could not stop drag-and-drop on the cheat tree.");
         }
 
-        Editor.Select(SelectionInfo.ForGame(Game));
+        _dotNetRef?.Dispose();
     }
 }

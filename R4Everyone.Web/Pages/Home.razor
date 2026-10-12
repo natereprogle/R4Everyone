@@ -1,722 +1,309 @@
 @page "/"
 @implements IDisposable
 @inject EditorState Editor
-@inject ViewportService Viewport
-@inject IJSRuntime Js
+@inject EditorCommands Commands
+@inject ConfirmService Confirm
+@inject KeyboardShortcutService Shortcuts
+@inject ChangelogService Changelog
+@inject FileDownloadService FileDownload
+@inject GameTdbService GameTdb
 @inject ToastService Toasts
-@inject XmlDataService Xml;
-@using System.Reflection
-@using System.Xml.Linq
+@inject ILogger<Home> Logger
 
 <PageTitle>R4Everyone</PageTitle>
 
-@if (!_isDesktop)
-{
-    <div class="desktop-warning">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h1 class="h4 mb-2">Desktop required</h1>
-                <p class="mb-0">This app is designed for desktop. Please open it on a desktop browser.</p>
-            </div>
-        </div>
+<div class="app-shell">
+    <AppHeaderBar FileName="@Editor.LoadedFileName" HasLoadedFile="Editor.HasLoadedFile" IsDirty="Editor.IsDirty"
+                  ErrorCount="Editor.ValidationErrors.Count" OnShowChangelog="OpenChangelog"/>
+
+    <div class="app-body">
+        <aside class="app-sidebar">
+            <FileControlsPanel CanSave="CanSave"
+                               CanExport="HasGames"
+                               OnNew="NewFileAsync"
+                               OnOpen="OpenFileAsync"
+                               OnSave="SaveAsync"
+                               OnImportXml="ImportXmlAsync"
+                               OnExportXml="ExportXmlAsync"/>
+
+            <ActionsPanel CanUndo="Editor.CanUndo"
+                          CanRedo="Editor.CanRedo"
+                          CanSortGames="@(Editor.Database?.Games.Count > 1)"
+                          CanRemoveGame="CanRemoveGame"
+                          Errors="Editor.ValidationErrors"
+                          OnUndo="Editor.Undo"
+                          OnRedo="Editor.Redo"
+                          OnAddGame="AddGame"
+                          OnSortGames="Editor.SortGames"
+                          OnRemoveGame="RemoveSelectedGameAsync"/>
+        </aside>
+
+        <main class="app-main">
+            <GameGridView Games="Editor.Database?.Games ?? []" OnGameSelected="OpenGameModal"/>
+        </main>
     </div>
-}
-else
-{
-    <div class="app-shell">
-        <AppHeaderBar FileName="@Editor.LoadedFileName" HasLoadedFile="Editor.HasLoadedFile" IsDirty="Editor.IsDirty"
-                      IsValid="Editor.IsValid" Errors="Editor.ValidationErrors"
-                      OnShowChangelog="OpenChangelog"/>
 
-        <div class="app-body container-fluid">
-            <div class="row h-100 g-3">
-                <div class="col-lg-2 h-100 d-flex flex-column gap-3">
-                    <FileControlsPanel CanSave="CanSave" OnNew="OnNewFile" OnOpen="OnOpenFileSelected"
-                                       OnSave="SaveAsync"/>
+    <GameEditorModal Game="_modalGame" OnClose="CloseGameModal"/>
 
-                    <ActionsPanel CanAddGame="true"
-                                  CanRemoveGame="CanRemoveGame"
-                                  IsValid="Editor.IsValid"
-                                  Errors="Editor.ValidationErrors"
-                                  OnAddGame="AddGame"
-                                  OnRemoveGame="RemoveGame"/>
-                </div>
+    <ChangelogModal IsOpen="_isChangelogOpen" AppVersion="@Changelog.AppVersion" OnClose="CloseChangelogAsync"/>
 
-                <div class="col-lg-10 h-100">
-                    <GameGridView Games="Editor.Database?.Games ?? []" OnGameSelected="OpenGameModal"
-                                  ImageUrlSelector="OnRenderGame"/>
-                </div>
-            </div>
-        </div>
-
-        <GameEditorModal IsOpen="IsGameModalOpen"
-                         Game="_modalGame"
-                         MasterCodes="MasterCodes"
-                         CheatCodeText="@CheatCodeText"
-                         CheatActivatorOptions="CheatActivatorOptions"
-                         ShowActivatorBanner="ShowActivatorBanner"
-                         OnClose="@CloseGameModal"
-                         OnGameIdInput="OnGameIdInput"
-                         OnGameTitleInput="OnGameTitleInput"
-                         OnGameChecksumInput="OnGameChecksumInput"
-                         OnGameEnabledChanged="OnGameEnabledChanged"
-                         OnMasterCodeInput="OnMasterCodeInput"
-                         OnRomFileSelected="OnRomFileSelected"
-                         OnFolderTitleInput="OnFolderTitleInput"
-                         OnFolderDescriptionInput="OnFolderDescriptionInput"
-                         OnFolderOneHotChanged="OnFolderOneHotChanged"
-                         OnCheatTitleInput="OnCheatTitleInput"
-                         OnCheatDescriptionInput="OnCheatDescriptionInput"
-                         OnCheatEnabledChanged="OnCheatEnabledChanged"
-                         OnCheatCodeInput="OnCheatCodeInput"
-                         OnCheatActivatorOptionsChanged="OnCheatActivatorOptionsChanged"/>
-
-        <ChangelogModal IsOpen="_isChangelogOpen"
-                        AppVersion="@_appVersion"
-                        OnClose="@CloseChangelog"/>
-    </div>
-}
+    <EncodingPromptModal IsOpen="_pendingOpen != null"
+                         FileName="@(_pendingOpen?.FileName ?? string.Empty)"
+                         Marker="@(_pendingOpen?.Marker ?? string.Empty)"
+                         OnSelected="OpenPendingFileAsync"
+                         OnCancel="CancelPendingOpen"/>
+</div>
 
 @code {
-    private bool _isDesktop = true;
-    private bool _isGameModalOpen;
-    private R4Game? _modalGame;
     private bool _isChangelogOpen;
-    private bool _changelogChecked;
-    private string _appVersion = "1.0.0";
-    private readonly Dictionary<R4Cheat, R4Game.XyActivatorMode> _xyModePreference =
-        new(ReferenceEqualityComparer<R4Cheat>.Instance);
 
-    private bool IsGameModalOpen => _isGameModalOpen && _modalGame != null;
+    // The game shown in the editor modal, or null when the modal is closed.
+    private R4Game? _modalGame;
+
+    // A file waiting for the user to choose an encoding, or null when no prompt is shown.
+    private PendingOpen? _pendingOpen;
 
     private bool CanSave => Editor.HasLoadedFile && Editor.IsDirty && Editor.IsValid;
     private bool CanRemoveGame => Editor.SelectionKind == SelectionKind.Game;
+    private bool HasGames => Editor.Database?.Games.Count > 0;
 
-    private string[] MasterCodes => GetMasterCodes();
-
-    private string CheatCodeText => Editor.SelectedCheat == null
-        ? string.Empty
-        : FormatCheatBlocks(Editor.GetCheatCodeBlocks(Editor.SelectedCheat).Select(ToBigEndianHex));
-
-    private R4Game.CheatActivatorOptions CheatActivatorOptions => Editor.SelectedCheat == null
-        ? new R4Game.CheatActivatorOptions()
-        : GetEffectiveActivatorOptions(Editor.SelectedCheat);
-
-    private bool ShowActivatorBanner => Editor.SelectedCheat != null &&
-                                        R4Game.AnalyzeCheatActivator(Editor.SelectedCheat).Options.HasActivator;
+    // Shortcuts are ignored while a dialog is open, so undo cannot change what the dialog is about.
+    private bool IsDialogOpen => Confirm.Current != null || _pendingOpen != null;
 
     protected override void OnInitialized()
     {
         Editor.StateChanged += HandleStateChanged;
-        Viewport.ViewportChanged += HandleViewportChanged;
-        _appVersion = GetAppVersion();
+        Shortcuts.UndoRequested += HandleUndoShortcut;
+        Shortcuts.RedoRequested += HandleRedoShortcut;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            await Viewport.InitializeAsync();
-            _isDesktop = Viewport.IsDesktop;
-            await CheckChangelogAsync();
-            StateHasChanged();
+            return;
         }
+
+        await Shortcuts.RegisterAsync();
+        _isChangelogOpen = await Changelog.HasUnseenChangesAsync();
+
+        if (!GameTdb.IsAvailable)
+        {
+            Toasts.ShowWarning("Cover art is unavailable because the GameTDB database could not be loaded.");
+        }
+
+        StateHasChanged();
     }
 
     private void HandleStateChanged()
     {
-        if (_isGameModalOpen && _modalGame != null)
+        // Close the modal if its game was removed.
+        if (_modalGame != null && Editor.Database?.Games.Contains(_modalGame) != true)
         {
-            var games = Editor.Database?.Games;
-            if (games == null || !games.Contains(_modalGame))
-            {
-                _isGameModalOpen = false;
-                _modalGame = null;
-            }
+            _modalGame = null;
         }
 
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(StateHasChanged);
     }
 
-    private void HandleViewportChanged()
+    private void HandleUndoShortcut()
     {
-        _isDesktop = Viewport.IsDesktop;
-        InvokeAsync(StateHasChanged);
+        if (!IsDialogOpen)
+        {
+            Editor.Undo();
+        }
+    }
+
+    private void HandleRedoShortcut()
+    {
+        if (!IsDialogOpen)
+        {
+            Editor.Redo();
+        }
     }
 
     private void OpenGameModal(R4Game game)
     {
-        _modalGame = game;
-        _isGameModalOpen = true;
-        Editor.Select(SelectionInfo.ForGame(game));
-    }
-
-    private async Task<string> OnRenderGame(R4Game game)
-    {
-        if (string.IsNullOrWhiteSpace(game.GameId))
-        {
-            return string.Empty;
-        }
-
-        var gameElement = await Xml.FindGameByIdAsync("assets/dstdb.xml", game.GameId);
-        if (gameElement is null)
-        {
-            return string.Empty;
-        }
-
-        var languages = GetLanguageCandidates(gameElement);
-        foreach (var url in languages.Select(lang => $"https://art.gametdb.com/ds/coverM/{lang}/{game.GameId}.jpg"))
-        {
-            if (await ImageExistsAsync(url))
-            {
-                return url;
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private static List<string> GetLanguageCandidates(XElement gameElement)
-    {
-        var localeLanguages = gameElement.Elements("locale")
-            .Select(locale => locale.Attribute("lang")?.Value)
-            .Where(lang => !string.IsNullOrWhiteSpace(lang))
-            .Select(lang => lang!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var languages = localeLanguages;
-        if (languages.Count == 0)
-        {
-            var languageText = (string?)gameElement.Element("languages");
-            if (!string.IsNullOrWhiteSpace(languageText))
-            {
-                languages = languageText
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(lang => lang.Trim())
-                    .Where(lang => !string.IsNullOrWhiteSpace(lang))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-            }
-        }
-
-        if (languages.Count == 0)
-        {
-            return [];
-        }
-
-        var enIndex = languages.FindIndex(lang => lang.Equals("EN", StringComparison.OrdinalIgnoreCase));
-        if (enIndex <= 0) return languages;
-        var enValue = languages[enIndex];
-        languages.RemoveAt(enIndex);
-        languages.Insert(0, enValue);
-
-        return languages;
-    }
-
-    private async Task<bool> ImageExistsAsync(string url)
-    {
         try
         {
-            return await Js.InvokeAsync<bool>("r4eImages.check", url);
+            Editor.Select(SelectionInfo.ForGame(game));
+            _modalGame = game;
         }
-        catch
+        catch (InvalidDataException ex)
         {
-            return false;
+            Logger.LogError(ex, "Could not read game {GameId}.", game.GameId);
+            Toasts.ShowError($"'{EditorState.GetGameDisplayTitle(game)}' could not be read. This part of the file may be corrupt.");
         }
     }
 
     private void CloseGameModal()
     {
+        // Keep the game selected so "Remove Last Edited Game" applies to it.
         if (_modalGame != null)
         {
             Editor.Select(SelectionInfo.ForGame(_modalGame));
         }
-        else
-        {
-            Editor.Deselect();
-        }
 
-        _isGameModalOpen = false;
         _modalGame = null;
     }
 
     private void AddGame()
     {
-        _isGameModalOpen = false;
         _modalGame = null;
         Editor.AddGame();
     }
 
-
-    private void RemoveGame()
+    private async Task RemoveSelectedGameAsync()
     {
-        if (Editor.SelectionKind != SelectionKind.Game || Editor.SelectedGame == null)
+        if (Editor.SelectionKind == SelectionKind.Game && Editor.SelectedGame != null)
+        {
+            await Commands.RemoveGameAsync(Editor.SelectedGame);
+        }
+    }
+
+    private async Task NewFileAsync()
+    {
+        if (!await Commands.ConfirmDiscardChangesAsync("Creating a new file"))
         {
             return;
         }
 
-        var removedGame = Editor.SelectedGame;
-        Editor.RemoveSelected();
-
-        if (!_isGameModalOpen || !ReferenceEquals(removedGame, _modalGame)) return;
-        _isGameModalOpen = false;
         _modalGame = null;
-    }
-
-
-    private string[] GetMasterCodes()
-    {
-        var game = Editor.SelectedGame ?? _modalGame;
-        if (game == null)
-        {
-            return [];
-        }
-
-        return Editor.GetMasterCodeText(game)
-            .Select(ToBigEndianHex)
-            .ToArray();
-    }
-
-    private void OnGameIdInput(ChangeEventArgs args)
-    {
-        Editor.UpdateGameId(args.Value?.ToString() ?? string.Empty);
-    }
-
-    private void OnGameTitleInput(ChangeEventArgs args)
-    {
-        Editor.UpdateGameTitle(args.Value?.ToString() ?? string.Empty);
-    }
-
-    private void OnGameChecksumInput(ChangeEventArgs args)
-    {
-        Editor.UpdateGameChecksum(args.Value?.ToString() ?? string.Empty);
-    }
-
-    private void OnGameEnabledChanged(ChangeEventArgs args)
-    {
-        Editor.UpdateGameEnabled(args.Value is bool and true);
-    }
-
-    private void OnMasterCodeInput(int index, ChangeEventArgs args)
-    {
-        var game = Editor.SelectedGame ?? _modalGame;
-        if (game == null)
-        {
-            return;
-        }
-
-        var input = args.Value?.ToString() ?? string.Empty;
-        var sanitized = SanitizeHexInput(input, 8);
-        Editor.UpdateMasterCode(game, index, ToLittleEndianHex(sanitized));
-    }
-
-    private void OnFolderTitleInput(ChangeEventArgs args)
-    {
-        Editor.UpdateFolderTitle(args.Value?.ToString() ?? string.Empty);
-    }
-
-    private void OnFolderDescriptionInput(ChangeEventArgs args)
-    {
-        Editor.UpdateFolderDescription(args.Value?.ToString() ?? string.Empty);
-    }
-
-    private void OnFolderOneHotChanged(ChangeEventArgs args)
-    {
-        Editor.UpdateFolderOneHot(args.Value is true);
-        if (args.Value is true)
-            Toasts.ShowWarning("'One Hot' only allows one cheat in a folder to be enabled at a time, and so all cheats except the first 'Enabled' one (if any) have been disabled. If this was unintended, disable One Hot and re-enable your cheats.");
-    }
-
-    private void OnCheatTitleInput(ChangeEventArgs args)
-    {
-        Editor.UpdateCheatTitle(args.Value?.ToString() ?? string.Empty);
-    }
-
-    private void OnCheatDescriptionInput(ChangeEventArgs args)
-    {
-        Editor.UpdateCheatDescription(args.Value?.ToString() ?? string.Empty);
-    }
-
-    private void OnCheatEnabledChanged(ChangeEventArgs args)
-    {
-        Editor.UpdateCheatEnabled(args.Value is true);
-    }
-
-    private void OnCheatCodeInput(string value)
-    {
-        if (Editor.SelectedCheat == null)
-        {
-            return;
-        }
-
-        var rows = ParseCheatRows(value);
-        if (rows.Any(row => !IsValidHexWord(row)))
-        {
-            Editor.UpdateCheatBlocks(Editor.SelectedCheat, rows.Select(ToLittleEndianHex).ToList());
-            return;
-        }
-
-        var words = rows
-            .Select(ParseHexWord)
-            .Select(word => word!.Value)
-            .ToList();
-
-        var analysis = R4Game.AnalyzeCheatActivator(words);
-        var options = ResolveOptionsWithPreference(Editor.SelectedCheat, analysis.Options);
-        if (HasXyConstraint(analysis.Options))
-        {
-            _xyModePreference[Editor.SelectedCheat] = analysis.Options.XyMode;
-        }
-
-        var payloadWords = options.HasActivator
-            ? TrimAllTrailingResets(analysis.PayloadWords)
-            : analysis.PayloadWords;
-        var fullWords = R4Game.BuildCheatCodeWithActivator(payloadWords, options);
-        var blocks = fullWords
-            .Select(word => word.ToString("X8"))
-            .Select(ToLittleEndianHex)
-            .ToList();
-
-        Editor.UpdateCheatBlocks(Editor.SelectedCheat, blocks);
-    }
-
-    private void OnCheatActivatorOptionsChanged(R4Game.CheatActivatorOptions options)
-    {
-        if (Editor.SelectedCheat == null)
-        {
-            return;
-        }
-
-        _xyModePreference[Editor.SelectedCheat] = options.XyMode;
-        var analyzed = R4Game.AnalyzeCheatActivator(Editor.SelectedCheat);
-        var payloadWords = options.HasActivator
-            ? TrimAllTrailingResets(analyzed.PayloadWords)
-            : analyzed.PayloadWords;
-        var fullWords = R4Game.BuildCheatCodeWithActivator(payloadWords, options);
-        var blocks = fullWords
-            .Select(word => word.ToString("X8"))
-            .Select(ToLittleEndianHex)
-            .ToList();
-
-        Editor.UpdateCheatBlocks(Editor.SelectedCheat, blocks);
-    }
-
-    private async Task OnRomFileSelected(InputFileChangeEventArgs args)
-    {
-        var game = Editor.SelectedGame ?? _modalGame;
-        if (game == null)
-        {
-            return;
-        }
-
-        var file = args.File;
-        // Allows files of any size to be open, since we're only reading the first 512 bytes, and it's local anyway.
-        await using var stream = file.OpenReadStream(int.MaxValue);
-        var buffer = new byte[512];
-        var bytesRead = await stream.ReadAsync(buffer);
-
-        if (bytesRead > 0)
-        {
-            var data = buffer.Take(bytesRead).ToArray();
-            Editor.ApplyRomMetadata(data);
-        }
-    }
-
-    private async Task OnOpenFileSelected(InputFileChangeEventArgs args)
-    {
-        Toasts.ShowInfo("Opening file...");
-        var file = args.File;
-        await using var stream = file.OpenReadStream(int.MaxValue);
-        using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
-        ms.Position = 0;
-        await Editor.LoadAsync(ms, file.Name);
-    }
-
-    private void OnNewFile()
-    {
         Editor.NewFile();
         Toasts.ShowInfo("New file created. Ready to edit!");
+    }
+
+    private async Task OpenFileAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        byte[] bytes;
+        try
+        {
+            // The database is parsed lazily from an in-memory copy, so read the whole file.
+            await using var stream = file.OpenReadStream(long.MaxValue);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+            bytes = buffer.ToArray();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not read {FileName}.", file.Name);
+            Toasts.ShowError($"Could not read {file.Name}: {ex.Message}");
+            return;
+        }
+
+        if (!await Commands.ConfirmDiscardChangesAsync($"Opening {file.Name}"))
+        {
+            return;
+        }
+
+        if (DatabaseFileHeader.HasUnknownEncodingMarker(bytes, out var marker))
+        {
+            _pendingOpen = new PendingOpen(bytes, file.Name, DatabaseFileHeader.FormatMarker(marker));
+            return;
+        }
+
+        await LoadFileAsync(bytes, file.Name, encoding: null);
+    }
+
+    private async Task OpenPendingFileAsync(R4Encoding encoding)
+    {
+        if (_pendingOpen is not { } pending)
+        {
+            return;
+        }
+
+        _pendingOpen = null;
+        await LoadFileAsync(pending.File, pending.FileName, encoding);
+    }
+
+    private void CancelPendingOpen()
+    {
+        if (_pendingOpen != null)
+        {
+            Toasts.ShowInfo($"Did not open {_pendingOpen.FileName}.");
+            _pendingOpen = null;
+        }
+    }
+
+    private async Task LoadFileAsync(byte[] file, string fileName, R4Encoding? encoding)
+    {
+        Toasts.ShowInfo($"Opening {fileName}...");
+        try
+        {
+            _modalGame = null;
+            await Editor.LoadAsync(file, fileName, encoding);
+            var opened = $"Opened {fileName} ({Editor.Database?.Games.Count ?? 0} games).";
+            Toasts.ShowInfo(encoding == null ? opened : $"{opened} Save it to write the {encoding} encoding marker.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not open {FileName}.", fileName);
+            Toasts.ShowError($"Could not open {fileName}: {ex.Message}");
+        }
+    }
+
+    private async Task ImportXmlAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        try
+        {
+            await using var stream = file.OpenReadStream(long.MaxValue);
+            using var reader = new StreamReader(stream);
+            var xml = await reader.ReadToEndAsync();
+
+            if (!await Commands.ConfirmDiscardChangesAsync($"Importing {file.Name}"))
+            {
+                return;
+            }
+
+            _modalGame = null;
+            Editor.ImportXml(xml, file.Name);
+            Toasts.ShowInfo($"Imported {Editor.Database?.Games.Count ?? 0} games from {file.Name}. Save to create {Editor.SaveFileName}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not import {FileName}.", file.Name);
+            Toasts.ShowError($"Could not import {file.Name}: {ex.Message}");
+        }
+    }
+
+    private async Task ExportXmlAsync()
+    {
+        var fileName = Path.ChangeExtension(Editor.SaveFileName, ".xml");
+        try
+        {
+            var xml = Editor.ExportXml();
+            await FileDownload.DownloadAsync(fileName, System.Text.Encoding.UTF8.GetBytes(xml), "application/xml");
+            Toasts.ShowInfo($"Exported {fileName}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not export {FileName}.", fileName);
+            Toasts.ShowError($"Could not export {fileName}: {ex.Message}");
+        }
     }
 
     private async Task SaveAsync()
     {
         if (!CanSave)
         {
-            Toasts.ShowError("Please review any errors before saving");
+            Toasts.ShowError("Please review any errors before saving.");
             return;
         }
 
-        var bytes = await Editor.BuildSaveBytesAsync();
-        if (bytes == null)
+        var fileName = Editor.SaveFileName;
+        try
         {
-            return;
+            var bytes = await Editor.BuildSaveBytesAsync();
+            Toasts.ShowInfo("Beginning download...");
+            await FileDownload.DownloadAsync(fileName, bytes);
+            Editor.MarkSaved();
         }
-
-        Toasts.ShowInfo("Beginning download...");
-        var fileName = string.IsNullOrWhiteSpace(Editor.LoadedFileName) ? "cheats.dat" : Editor.LoadedFileName;
-        await Js.InvokeVoidAsync("downloadFile", fileName, "application/octet-stream", bytes);
-        Editor.MarkSaved();
-    }
-
-    public void Dispose()
-    {
-        Editor.StateChanged -= HandleStateChanged;
-        Viewport.ViewportChanged -= HandleViewportChanged;
-    }
-
-    private static string ToBigEndianHex(string value)
-    {
-        return ReverseEndianHex(value);
-    }
-
-    private static string ToLittleEndianHex(string value)
-    {
-        return ReverseEndianHex(value);
-    }
-
-    private static string ReverseEndianHex(string value)
-    {
-        if (value.Length != 8)
+        catch (Exception ex)
         {
-            return value;
-        }
-
-        return string.Concat(
-            value.AsSpan(6, 2),
-            value.AsSpan(4, 2),
-            value.AsSpan(2, 2),
-            value.AsSpan(0, 2));
-    }
-
-    private static string SanitizeHexInput(string input, int maxLength)
-    {
-        if (string.IsNullOrEmpty(input))
-        {
-            return string.Empty;
-        }
-
-        var buffer = new List<char>(Math.Min(input.Length, maxLength));
-        foreach (var ch in input)
-        {
-            if (!IsHexChar(ch))
-            {
-                continue;
-            }
-
-            buffer.Add(char.ToUpperInvariant(ch));
-            if (buffer.Count == maxLength)
-            {
-                break;
-            }
-        }
-
-        return new string(buffer.ToArray());
-    }
-
-    private static List<string> ParseCheatRows(string input)
-    {
-        if (string.IsNullOrEmpty(input))
-        {
-            return [];
-        }
-
-        var normalized = input.Replace("\r\n", "\n").Replace("\r", "\n");
-        var rows = new List<string>();
-        if (normalized.Contains('\n'))
-        {
-            var lines = normalized.Split('\n');
-            foreach (var line in lines)
-            {
-                var chars = line.Where(IsHexChar)
-                    .Select(char.ToUpperInvariant)
-                    .ToArray();
-
-                if (chars.Length == 0)
-                {
-                    continue;
-                }
-
-                var chunks = SplitIntoChunks(chars);
-                AppendRows(rows, chunks);
-            }
-        }
-        else
-        {
-            var chars = normalized.Where(IsHexChar)
-                .Select(char.ToUpperInvariant)
-                .ToArray();
-
-            if (chars.Length == 0)
-            {
-                return [];
-            }
-
-            var chunks = SplitIntoChunks(chars);
-            AppendRows(rows, chunks);
-        }
-
-        if (rows.Count % 2 != 0)
-        {
-            rows.Add(string.Empty);
-        }
-
-        return rows;
-    }
-
-    private static string FormatCheatBlocks(IEnumerable<string> blocks)
-    {
-        var formattedBlocks = blocks.ToList();
-        if (formattedBlocks.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        if (formattedBlocks.Count % 2 != 0)
-        {
-            formattedBlocks.Add(string.Empty);
-        }
-
-        var lines = new List<string>();
-        for (var i = 0; i < formattedBlocks.Count; i += 2)
-        {
-            var left = formattedBlocks[i];
-            var right = formattedBlocks[i + 1];
-            if (string.IsNullOrEmpty(left) && string.IsNullOrEmpty(right))
-            {
-                continue;
-            }
-
-            if (string.IsNullOrEmpty(right))
-            {
-                lines.Add(left);
-                continue;
-            }
-
-            lines.Add($"{left} {right}");
-        }
-
-        return string.Join("\n", lines);
-    }
-
-    private static List<string> SplitIntoChunks(char[] chars)
-    {
-        var chunks = new List<string>();
-        for (var i = 0; i < chars.Length; i += 8)
-        {
-            var length = Math.Min(8, chars.Length - i);
-            chunks.Add(new string(chars, i, length));
-        }
-
-        return chunks;
-    }
-
-    private static void AppendRows(List<string> rows, List<string> chunks)
-    {
-        for (var i = 0; i < chunks.Count; i += 2)
-        {
-            rows.Add(chunks[i]);
-            rows.Add(i + 1 < chunks.Count ? chunks[i + 1] : string.Empty);
-        }
-    }
-
-    private static bool IsHexChar(char ch)
-    {
-        return ch is >= '0' and <= '9' || ch is >= 'a' and <= 'f' || ch is >= 'A' and <= 'F';
-    }
-
-    private static uint? ParseHexWord(string value)
-    {
-        return value.Length == 8 && uint.TryParse(value, System.Globalization.NumberStyles.HexNumber, null, out var parsed)
-            ? parsed
-            : null;
-    }
-
-    private static bool IsValidHexWord(string value)
-    {
-        return value.Length == 8 && value.All(IsHexChar);
-    }
-
-    private R4Game.CheatActivatorOptions GetEffectiveActivatorOptions(R4Cheat cheat)
-    {
-        var analyzed = R4Game.AnalyzeCheatActivator(cheat).Options;
-        if (!HasXyConstraint(analyzed)) return ResolveOptionsWithPreference(cheat, analyzed);
-        _xyModePreference[cheat] = analyzed.XyMode;
-        return analyzed;
-
-    }
-
-    private R4Game.CheatActivatorOptions ResolveOptionsWithPreference(
-        R4Cheat cheat,
-        R4Game.CheatActivatorOptions analyzed)
-    {
-        if (HasXyConstraint(analyzed))
-        {
-            return analyzed;
-        }
-
-        var mode = _xyModePreference.TryGetValue(cheat, out var preferredMode)
-            ? preferredMode
-            : analyzed.XyMode;
-
-        return new R4Game.CheatActivatorOptions(CloneStates(analyzed), mode);
-    }
-
-    private static Dictionary<R4Game.ActivatorButton, R4Game.ActivatorKeyState> CloneStates(
-        R4Game.CheatActivatorOptions options)
-    {
-        var states = R4Game.CreateDefaultButtonStates();
-        foreach (var (button, state) in options.ButtonStates)
-        {
-            states[button] = state;
-        }
-
-        return states;
-    }
-
-    private static bool HasXyConstraint(R4Game.CheatActivatorOptions options)
-    {
-        return options.ButtonStates.TryGetValue(R4Game.ActivatorButton.X, out var x) &&
-               x != R4Game.ActivatorKeyState.Ignore
-               || options.ButtonStates.TryGetValue(R4Game.ActivatorButton.Y, out var y) &&
-               y != R4Game.ActivatorKeyState.Ignore;
-    }
-
-    private static IReadOnlyList<uint> TrimAllTrailingResets(IReadOnlyList<uint> words)
-    {
-        var list = words.ToList();
-        while (list is [.., 0xD2000000, 0x00000000])
-        {
-            list.RemoveRange(list.Count - 2, 2);
-        }
-
-        return list;
-    }
-
-    private static string GetAppVersion()
-    {
-        var attr = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-        if (!string.IsNullOrWhiteSpace(attr?.InformationalVersion))
-        {
-            return attr.InformationalVersion.Split('+')[0];
-        }
-
-        return typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0";
-    }
-
-    private async Task CheckChangelogAsync()
-    {
-        if (_changelogChecked)
-        {
-            return;
-        }
-
-        _changelogChecked = true;
-        var seenVersion = await Js.InvokeAsync<string>("r4eChangelog.getSeenVersion");
-        if (!string.Equals(seenVersion, _appVersion, StringComparison.OrdinalIgnoreCase))
-        {
-            _isChangelogOpen = true;
+            Logger.LogError(ex, "Could not save {FileName}.", fileName);
+            Toasts.ShowError($"Could not save {fileName}: {ex.Message}");
         }
     }
 
@@ -725,10 +312,18 @@ else
         _isChangelogOpen = true;
     }
 
-    private async Task CloseChangelog()
+    private async Task CloseChangelogAsync()
     {
         _isChangelogOpen = false;
-        await Js.InvokeVoidAsync("r4eChangelog.setSeenVersion", _appVersion);
+        await Changelog.MarkSeenAsync();
     }
 
+    public void Dispose()
+    {
+        Editor.StateChanged -= HandleStateChanged;
+        Shortcuts.UndoRequested -= HandleUndoShortcut;
+        Shortcuts.RedoRequested -= HandleRedoShortcut;
+    }
+
+    private sealed record PendingOpen(byte[] File, string FileName, string Marker);
 }

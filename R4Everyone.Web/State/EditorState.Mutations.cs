@@ -4,25 +4,48 @@ namespace R4Everyone.Web.State;
 
 public partial class EditorState
 {
-    public void AddGame()
+    public R4Game AddGame()
     {
-        EnsureDatabase();
         var game = new R4Game(string.Empty)
         {
             GameTitle = "New Game",
             GameEnabled = true,
             GameChecksum = string.Empty,
-            MasterCodes = new uint[8]
+            MasterCodes = new uint[MasterCodeCount]
         };
 
-        Database!.Games.Add(game);
-        Select(SelectionInfo.ForGame(game));
-        MarkDirty();
+        Change(null, () =>
+        {
+            EnsureDatabase().Games.Add(game);
+            Database!.MarkGameDirty(game);
+            Select(SelectionInfo.ForGame(game));
+        });
+        return game;
     }
 
+    public void RemoveGame(R4Game game)
+    {
+        if (Database?.Games.Contains(game) != true)
+        {
+            return;
+        }
+
+        Change(null, () =>
+        {
+            Database.Games.Remove(game);
+            if (ReferenceEquals(SelectedGame, game))
+            {
+                ClearSelection();
+            }
+        });
+    }
+
+    /// <summary>
+    /// Adds a folder at the top level of the selected game.
+    /// </summary>
     public void AddFolder()
     {
-        if (SelectedGame == null || SelectionKind != SelectionKind.Game)
+        if (SelectedGame is not { } game)
         {
             return;
         }
@@ -34,14 +57,20 @@ public partial class EditorState
             OneHot = false
         };
 
-        SelectedGame.Items.Add(folder);
-        Select(SelectionInfo.ForFolder(SelectedGame, folder));
-        MarkDirty();
+        Change(game, () =>
+        {
+            game.Items.Add(folder);
+            Select(SelectionInfo.ForFolder(game, folder));
+        });
     }
 
+    /// <summary>
+    /// Adds a cheat to the selected folder, or to the folder containing the selected cheat, or to the top level of
+    /// the selected game.
+    /// </summary>
     public void AddCheat()
     {
-        if (SelectedGame == null)
+        if (SelectedGame is not { } game)
         {
             return;
         }
@@ -53,274 +82,123 @@ public partial class EditorState
             Enabled = false
         };
 
-        if (SelectionKind == SelectionKind.Folder && SelectedFolder != null)
+        var folder = SelectedFolder;
+        Change(game, () =>
         {
-            SelectedFolder.Items.Add(cheat);
-            Select(SelectionInfo.ForCheat(SelectedGame, SelectedFolder, cheat));
-        }
-        else if (SelectionKind == SelectionKind.Game)
-        {
-            SelectedGame.Items.Add(cheat);
-            Select(SelectionInfo.ForCheat(SelectedGame, null, cheat));
-        }
-        else
-        {
-            return;
-        }
-
-        MarkDirty();
+            (folder?.Items ?? game.Items).Add(cheat);
+            Select(SelectionInfo.ForCheat(game, folder, cheat));
+        });
     }
 
-    public void RemoveSelected()
+    /// <summary>
+    /// Removes the selected folder or cheat and selects its parent.
+    /// </summary>
+    public void RemoveSelectedItem()
     {
-        if (SelectionKind == SelectionKind.None) return;
-
-        if (SelectionKind == SelectionKind.Game && SelectedGame != null)
-        {
-            Database?.Games.Remove(SelectedGame);
-            ClearSelection();
-            MarkDirty();
-            return;
-        }
-
-        if (SelectedGame == null) return;
-
-        if (SelectionKind == SelectionKind.Folder && SelectedFolder != null)
-        {
-            SelectedGame.Items.Remove(SelectedFolder);
-            Select(SelectionInfo.ForGame(SelectedGame));
-            MarkDirty();
-            return;
-        }
-
-        if (SelectionKind == SelectionKind.Cheat && SelectedCheat != null)
-        {
-            if (SelectedFolder != null)
-            {
-                SelectedFolder.Items.Remove(SelectedCheat);
-                Select(SelectionInfo.ForFolder(SelectedGame, SelectedFolder));
-            }
-            else
-            {
-                SelectedGame.Items.Remove(SelectedCheat);
-                Select(SelectionInfo.ForGame(SelectedGame));
-            }
-
-            MarkDirty();
-        }
-    }
-
-    public void UpdateGameId(string value)
-    {
-        if (SelectedGame == null)
+        if (SelectedGame is not { } game || SelectedItem is not { } item ||
+            FindParentItems(game, item) is not { } siblings)
         {
             return;
         }
 
-        SelectedGame.GameId = value;
-        MarkDirty();
-    }
-
-    public void UpdateGameTitle(string value)
-    {
-        if (SelectedGame == null)
+        var parentFolder = SelectionKind == SelectionKind.Cheat ? SelectedFolder : null;
+        Change(game, () =>
         {
-            return;
-        }
-
-        SelectedGame.GameTitle = value;
-        MarkDirty();
+            siblings.Remove(item);
+            Select(parentFolder != null ? SelectionInfo.ForFolder(game, parentFolder) : SelectionInfo.ForGame(game));
+        });
     }
 
-    public void UpdateGameEnabled(bool value)
-    {
-        if (SelectedGame == null)
-        {
-            return;
-        }
+    public void UpdateGameId(R4Game game, string value) =>
+        Change(game, () => game.GameId = value, game, nameof(R4Game.GameId));
 
-        SelectedGame.GameEnabled = value;
-        MarkDirty();
-    }
+    public void UpdateGameTitle(R4Game game, string value) =>
+        Change(game, () => game.GameTitle = value, game, nameof(R4Game.GameTitle));
 
-    public void UpdateGameChecksum(string value)
-    {
-        if (SelectedGame == null)
-        {
-            return;
-        }
+    public void UpdateGameEnabled(R4Game game, bool value) =>
+        Change(game, () => game.GameEnabled = value);
 
-        SelectedGame.GameChecksum = value;
-        MarkDirty();
-    }
-
-    public string[] GetMasterCodeText(R4Game game)
-    {
-        EnsureMasterCodes(game);
-        EnsureMasterCodeBuffer(game);
-        return _masterCodeText[game];
-    }
-
-    public void UpdateMasterCode(R4Game game, int index, string value)
-    {
-        EnsureMasterCodes(game);
-        EnsureMasterCodeBuffer(game);
-        var buffer = _masterCodeText[game];
-
-        if (index < 0 || index >= buffer.Length)
-        {
-            return;
-        }
-
-        buffer[index] = value;
-
-        if (TryParseHex8ToUInt(value, out var parsed))
-        {
-            game.MasterCodes[index] = parsed;
-        }
-
-        MarkDirty();
-    }
+    public void UpdateGameChecksum(R4Game game, string value) =>
+        Change(game, () => game.GameChecksum = value, game, nameof(R4Game.GameChecksum));
 
     public void UpdateFolderTitle(string value)
     {
-        if (SelectedFolder == null)
+        if (SelectedFolder is { } folder)
         {
-            return;
+            Change(SelectedGame, () => folder.Title = value, folder, nameof(R4Folder.Title));
         }
-
-        SelectedFolder.Title = value;
-        MarkDirty();
     }
 
     public void UpdateFolderDescription(string value)
     {
-        if (SelectedFolder == null)
+        if (SelectedFolder is { } folder)
         {
-            return;
+            Change(SelectedGame, () => folder.Description = value, folder, nameof(R4Folder.Description));
         }
-
-        SelectedFolder.Description = value;
-        MarkDirty();
     }
 
+    /// <summary>
+    /// Sets the folder's One Hot flag. Turning it on keeps only the first enabled cheat enabled.
+    /// </summary>
     public void UpdateFolderOneHot(bool value)
     {
-        if (SelectedFolder == null)
+        if (SelectedFolder is not { } folder)
         {
             return;
         }
 
-        SelectedFolder.OneHot = value;
-        var seen = false;
-        SelectedFolder.Items.ForEach(i =>
+        Change(SelectedGame, () =>
         {
-            if (i is R4Cheat c)
-                c.Enabled = c.Enabled && !seen && (seen = true);
+            folder.OneHot = value;
+            if (value)
+            {
+                var keptOne = false;
+                foreach (var cheat in folder.Items.OfType<R4Cheat>().Where(cheat => cheat.Enabled))
+                {
+                    cheat.Enabled = !keptOne;
+                    keptOne = true;
+                }
+            }
         });
-
-        MarkDirty();
     }
 
     public void UpdateCheatTitle(string value)
     {
-        if (SelectedCheat == null)
+        if (SelectedCheat is { } cheat)
         {
-            return;
+            Change(SelectedGame, () => cheat.Title = value, cheat, nameof(R4Cheat.Title));
         }
-
-        SelectedCheat.Title = value;
-        MarkDirty();
     }
 
     public void UpdateCheatDescription(string value)
     {
-        if (SelectedCheat == null)
+        if (SelectedCheat is { } cheat)
         {
-            return;
+            Change(SelectedGame, () => cheat.Description = value, cheat, nameof(R4Cheat.Description));
         }
-
-        SelectedCheat.Description = value;
-        MarkDirty();
     }
 
+    /// <summary>
+    /// Enables or disables the selected cheat. In a One Hot folder, enabling a cheat disables its siblings.
+    /// </summary>
     public void UpdateCheatEnabled(bool value)
     {
-        if (SelectedCheat == null)
+        if (SelectedCheat is not { } cheat)
         {
             return;
         }
 
-        SelectedCheat.Enabled = value;
-
-        if (value && SelectedFolder is { OneHot: true })
+        var folder = SelectedFolder;
+        Change(SelectedGame, () =>
         {
-            foreach (var item in SelectedFolder.Items.OfType<R4Cheat>())
+            cheat.Enabled = value;
+            if (value && folder is { OneHot: true })
             {
-                if (!ReferenceEquals(item, SelectedCheat))
+                foreach (var sibling in folder.Items.OfType<R4Cheat>())
                 {
-                    item.Enabled = false;
+                    sibling.Enabled = ReferenceEquals(sibling, cheat);
                 }
             }
-        }
-
-        MarkDirty();
-    }
-
-    public List<string> GetCheatCodeBlocks(R4Cheat cheat)
-    {
-        EnsureCheatCodeBuffer(cheat);
-        return _cheatCodeText[cheat];
-    }
-
-    public void UpdateCheatBlock(R4Cheat cheat, int index, string value)
-    {
-        EnsureCheatCodeBuffer(cheat);
-        var blocks = _cheatCodeText[cheat];
-
-        if (index < 0 || index >= blocks.Count)
-        {
-            return;
-        }
-
-        blocks[index] = value;
-        SyncCheatCodes(cheat, blocks);
-        MarkDirty();
-    }
-
-    public void UpdateCheatBlocks(R4Cheat cheat, List<string> blocks)
-    {
-        EnsureCheatCodeBuffer(cheat);
-        var buffer = _cheatCodeText[cheat];
-        buffer.Clear();
-        buffer.AddRange(blocks);
-        SyncCheatCodes(cheat, buffer);
-        MarkDirty();
-    }
-
-    public void AddCheatRow(R4Cheat cheat)
-    {
-        EnsureCheatCodeBuffer(cheat);
-        var blocks = _cheatCodeText[cheat];
-        blocks.Add(string.Empty);
-        blocks.Add(string.Empty);
-        MarkDirty();
-    }
-
-    public void RemoveCheatRow(R4Cheat cheat, int rowIndex)
-    {
-        EnsureCheatCodeBuffer(cheat);
-        var blocks = _cheatCodeText[cheat];
-        var start = rowIndex * 2;
-
-        if (start < 0 || start >= blocks.Count)
-        {
-            return;
-        }
-
-        var removeCount = Math.Min(2, blocks.Count - start);
-        blocks.RemoveRange(start, removeCount);
-        SyncCheatCodes(cheat, blocks);
-        MarkDirty();
+        });
     }
 }

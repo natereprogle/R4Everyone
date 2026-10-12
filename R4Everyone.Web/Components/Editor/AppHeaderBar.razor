@@ -1,17 +1,17 @@
-@inject IJSRuntime Js
+@inject ThemeService Theme
 
 <div class="app-header">
     <div class="app-title">
         <div class="theme-toggle theme-toggle-icons" role="group" aria-label="Theme preference">
-            <button type="button" class="theme-icon @(_themePreference == "system" ? "is-active" : string.Empty)"
-                    @onclick="@(() => SetTheme("system"))" aria-label="System theme" title="System">
+            <button type="button" class="theme-icon @(_theme == ThemePreference.System ? "is-active" : string.Empty)"
+                    @onclick="() => SetThemeAsync(ThemePreference.System)" aria-label="System theme" title="System">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <rect x="3" y="4" width="18" height="12" rx="2"></rect>
                     <rect x="9" y="18" width="6" height="2" rx="1"></rect>
                 </svg>
             </button>
-            <button type="button" class="theme-icon @(_themePreference == "light" ? "is-active" : string.Empty)"
-                    @onclick="@(() => SetTheme("light"))" aria-label="Light theme" title="Light">
+            <button type="button" class="theme-icon @(_theme == ThemePreference.Light ? "is-active" : string.Empty)"
+                    @onclick="() => SetThemeAsync(ThemePreference.Light)" aria-label="Light theme" title="Light">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <circle cx="12" cy="12" r="4.5"></circle>
                     <line x1="12" y1="2.5" x2="12" y2="5"></line>
@@ -24,8 +24,8 @@
                     <line x1="17.7" y1="6.3" x2="19.4" y2="4.6"></line>
                 </svg>
             </button>
-            <button type="button" class="theme-icon @(_themePreference == "dark" ? "is-active" : string.Empty)"
-                    @onclick="@(() => SetTheme("dark"))" aria-label="Dark theme" title="Dark">
+            <button type="button" class="theme-icon @(_theme == ThemePreference.Dark ? "is-active" : string.Empty)"
+                    @onclick="() => SetThemeAsync(ThemePreference.Dark)" aria-label="Dark theme" title="Dark">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <path d="M15.4 3.6A8.5 8.5 0 1 0 20.4 16a7 7 0 0 1-5-12.4z"></path>
                 </svg>
@@ -39,7 +39,7 @@
     <div class="app-logo">
         <button type="button" class="app-logo-button" title="View changelog" aria-label="Open changelog"
                 @onclick="OnShowChangelog">
-            <img src="icon-192.png" alt="R4E Logo" style="height: 64px; width: 64px;"/>
+            <img class="app-logo-image" src="icon-192.png" alt="R4E Logo"/>
         </button>
     </div>
     <div class="app-status">
@@ -47,9 +47,9 @@
         {
             <span class="badge text-bg-warning">Unsaved changes</span>
         }
-        @if (!IsValid)
+        @if (ErrorCount > 0)
         {
-            <span class="badge text-bg-danger">@ValidationBadgeText</span>
+            <span class="badge text-bg-danger">@ErrorCount @(ErrorCount == 1 ? "error" : "errors")</span>
         }
         else
         {
@@ -62,35 +62,31 @@
     [Parameter] public string? FileName { get; set; }
     [Parameter] public bool HasLoadedFile { get; set; }
     [Parameter] public bool IsDirty { get; set; }
-    [Parameter] public bool IsValid { get; set; }
-    [Parameter] public IReadOnlyList<string> Errors { get; set; } = [];
+    [Parameter] public int ErrorCount { get; set; }
     [Parameter] public EventCallback OnShowChangelog { get; set; }
 
-    private string _themePreference = "system";
+    private ThemePreference _theme = ThemePreference.System;
 
     private string Subtitle => HasLoadedFile ? $"File: {FileName}" : "No file loaded";
-
-    private string ValidationBadgeText => $"{Errors.Count} errors";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
-            return;
-
-        var preference = await Js.InvokeAsync<string>("r4eTheme.getPreference");
-        if (!string.IsNullOrWhiteSpace(preference) && !string.Equals(preference, _themePreference, StringComparison.OrdinalIgnoreCase))
         {
-            _themePreference = preference;
+            return;
+        }
+
+        var theme = await Theme.GetPreferenceAsync();
+        if (theme != _theme)
+        {
+            _theme = theme;
             StateHasChanged();
         }
     }
 
-    private async Task SetTheme(string preference)
+    private async Task SetThemeAsync(ThemePreference theme)
     {
-        if (string.IsNullOrWhiteSpace(preference))
-            return;
-
-        _themePreference = preference;
-        await Js.InvokeVoidAsync("r4eTheme.setPreference", preference);
+        _theme = theme;
+        await Theme.SetPreferenceAsync(theme);
     }
 }

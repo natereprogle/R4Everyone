@@ -7,12 +7,24 @@
             <InputFile class="d-none" OnChange="@OnOpen" accept=".dat" />
         </label>
         <button class="btn btn-primary w-100" @onclick="OnSave" disabled="@(!CanSave)">Save File</button>
+        <div class="button-pair">
+            <label class="btn btn-outline-secondary" title="Replace the open file with games from a codelist XML file">
+                Import XML
+                <InputFile class="d-none" OnChange="@OnImportXml" accept=".xml" />
+            </label>
+            <button class="btn btn-outline-secondary" @onclick="OnExportXml" disabled="@(!CanExport)"
+                    title="Download the open file as codelist XML">Export XML
+            </button>
+        </div>
     </div>
 </div>
 
 @code {
     [Parameter] public bool CanSave { get; set; }
+    [Parameter] public bool CanExport { get; set; }
     [Parameter] public EventCallback OnNew { get; set; }
     [Parameter] public EventCallback<InputFileChangeEventArgs> OnOpen { get; set; }
     [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnImportXml { get; set; }
+    [Parameter] public EventCallback OnExportXml { get; set; }
 }

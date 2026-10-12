@@ -1,80 +1,87 @@
 @inject EditorState Editor
+@inject EditorCommands Commands
 
-@if (IsOpen && Game != null)
+@if (Game != null)
 {
-    <div class="game-modal-backdrop" @onclick="HandleBackdropClick" @onkeydown="HandleKeyDown" tabindex="0"
-         @ref="_overlay">
+    <div class="game-modal-backdrop" @onclick="OnClose" @onkeydown="HandleKeyDown" tabindex="0" @ref="_overlay">
         <div class="game-modal" @onclick:stopPropagation="true">
             <div class="game-modal-header">
                 <div class="modal-title">@EditorState.GetGameDisplayTitle(Game)</div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnClose">Close</button>
+                <div class="modal-header-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Editor.Undo"
+                            disabled="@(!Editor.CanUndo)" title="Undo (Ctrl+Z)">Undo
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Editor.Redo"
+                            disabled="@(!Editor.CanRedo)" title="Redo (Ctrl+Y or Ctrl+Shift+Z)">Redo
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnClose">Close</button>
+                </div>
             </div>
-            <div class="game-modal-body">
-                <div class="modal-left">
-                    <div class="card panel-card shadow-sm">
-                        <div class="card-header">Folders & Cheats</div>
-                        <div class="card-body panel-body">
-                            <div class="modal-actions action-grid">
+            <div class="modal-tabs" role="tablist" aria-label="Editor sections">
+                @foreach (var (tab, label) in Tabs)
+                {
+                    <button type="button" role="tab" class="modal-tab @(_tab == tab ? "is-active" : string.Empty)"
+                            aria-selected="@(_tab == tab ? "true" : "false")" @onclick="() => _tab = tab">
+                        @label
+                    </button>
+                }
+            </div>
+            <div class="game-modal-body show-@_tab.ToString().ToLowerInvariant()">
+                <div class="card panel-card shadow-sm modal-section modal-section-tree">
+                    <div class="card-header">Folders & Cheats</div>
+                    <div class="card-body panel-body">
+                        <div class="modal-actions action-grid">
+                            <div class="button-pair">
                                 <button type="button" class="btn btn-success" @onclick="AddFolder">Add Folder</button>
                                 <button type="button" class="btn btn-success" @onclick="AddCheat">Add Cheat</button>
-                                <button type="button" class="btn btn-danger" @onclick="RemoveFolder"
-                                        disabled="@(!CanRemoveFolder)">Remove Folder
-                                </button>
-                                <button type="button" class="btn btn-danger" @onclick="RemoveCheat"
-                                        disabled="@(!CanRemoveCheat)">Remove Cheat
-                                </button>
-                                <button type="button" class="btn btn-danger" @onclick="RemoveGame">Remove Game</button>
                             </div>
-                            <GameScopedTreeView Game="Game"/>
+                            @if (Editor.SelectionKind == SelectionKind.Cheat && MoveTargets.Count > 0)
+                            {
+                                @* Re-created after each move so it shows the placeholder again. *@
+                                <select @key="_moveCount" class="form-select form-select-sm"
+                                        aria-label="Move cheat to folder" @onchange="MoveCheatTo">
+                                    <option value="" disabled selected>Move cheat to…</option>
+                                    @for (var i = 0; i < MoveTargets.Count; i++)
+                                    {
+                                        <option value="@i">@MoveTargets[i].Label</option>
+                                    }
+                                </select>
+                            }
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Editor.SortSelectedContainer"
+                                    title="@SortTitle">@SortLabel
+                            </button>
+                            <button type="button" class="btn btn-danger" @onclick="Commands.RemoveSelectedItemAsync"
+                                    disabled="@(Editor.SelectedItem == null)">@RemoveItemLabel
+                            </button>
+                            <button type="button" class="btn btn-danger" @onclick="RemoveGameAsync">Remove Game</button>
                         </div>
+                        <div class="form-text mb-0">
+                            Drag the grip to reorder, or drop a cheat on a folder to move it inside.
+                        </div>
+                        <GameScopedTreeView Game="Game"/>
                     </div>
                 </div>
-                <div class="modal-right">
-                    <div class="card panel-card shadow-sm">
-                        <div class="card-header">Game Details</div>
-                        <div class="card-body panel-body">
-                            <GameDetailsEditor
-                                Game="Game"
-                                MasterCodes="MasterCodes"
-                                OnGameIdInput="OnGameIdInput"
-                                OnGameTitleInput="OnGameTitleInput"
-                                OnGameChecksumInput="OnGameChecksumInput"
-                                OnGameEnabledChanged="OnGameEnabledChanged"
-                                OnMasterCodeInput="OnMasterCodeInput"
-                                OnRomFileSelected="OnRomFileSelected"/>
-                        </div>
+                <div class="card panel-card shadow-sm modal-section modal-section-game">
+                    <div class="card-header">Game Details</div>
+                    <div class="card-body panel-body">
+                        <GameDetailsEditor Game="Game"/>
                     </div>
-                    <div class="card panel-card shadow-sm">
-                        <div class="card-header">Item Details</div>
-                        <div class="card-body panel-body">
-                            @switch (Editor.SelectionKind)
-                            {
-                                case SelectionKind.Folder when Editor.SelectedFolder != null:
-                                    <FolderDetailsEditor
-                                        Folder="Editor.SelectedFolder"
-                                        OnFolderTitleInput="OnFolderTitleInput"
-                                        OnFolderDescriptionInput="OnFolderDescriptionInput"
-                                        OnFolderOneHotChanged="OnFolderOneHotChanged"/>
-                                    break;
-                                case SelectionKind.Cheat when Editor.SelectedCheat != null:
-                                    <CheatDetailsEditor
-                                        Cheat="Editor.SelectedCheat"
-                                        CheatCodeText="@CheatCodeText"
-                                        CheatActivatorOptions="CheatActivatorOptions"
-                                        ShowActivatorBanner="ShowActivatorBanner"
-                                        OnCheatTitleInput="OnCheatTitleInput"
-                                        OnCheatDescriptionInput="OnCheatDescriptionInput"
-                                        OnCheatEnabledChanged="OnCheatEnabledChanged"
-                                        OnCheatCodeInput="OnCheatCodeInput"
-                                        OnCheatActivatorOptionsChanged="OnCheatActivatorOptionsChanged"/>
-                                    break;
-                                case SelectionKind.None:
-                                case SelectionKind.Game:
-                                default:
-                                    <div class="empty-state">Select a folder or cheat to edit.</div>
-                                    break;
-                            }
-                        </div>
+                </div>
+                <div class="card panel-card shadow-sm modal-section modal-section-item">
+                    <div class="card-header">Item Details</div>
+                    <div class="card-body panel-body">
+                        @switch (Editor.SelectionKind)
+                        {
+                            case SelectionKind.Folder when Editor.SelectedFolder != null:
+                                <FolderDetailsEditor Folder="Editor.SelectedFolder"/>
+                                break;
+                            case SelectionKind.Cheat when Editor.SelectedCheat != null:
+                                <CheatDetailsEditor Cheat="Editor.SelectedCheat"/>
+                                break;
+                            default:
+                                <div class="empty-state">Select a folder or cheat to edit.</div>
+                                break;
+                        }
                     </div>
                 </div>
             </div>
@@ -83,54 +90,79 @@
 }
 
 @code {
+    // On narrow screens only one section is shown at a time; on wider screens all three are visible.
+    private enum Tab
+    {
+        Tree,
+        Game,
+        Item
+    }
+
+    private static readonly (Tab Tab, string Label)[] Tabs =
+    [
+        (Tab.Tree, "Cheats"),
+        (Tab.Game, "Game"),
+        (Tab.Item, "Item")
+    ];
+
     private ElementReference _overlay;
-    private bool _focusRequested;
-    private bool _wasOpen;
+    private R4Game? _focusedGame;
+    private Tab _tab = Tab.Tree;
+    private object? _lastSelectedItem;
+    private int _moveCount;
 
-    [Parameter] public bool IsOpen { get; set; }
+    /// <summary>
+    /// The game being edited. The modal is open while this is set.
+    /// </summary>
     [Parameter] public R4Game? Game { get; set; }
+
     [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public string[] MasterCodes { get; set; } = [];
-    [Parameter] public string CheatCodeText { get; set; } = string.Empty;
-    [Parameter] public R4Game.CheatActivatorOptions CheatActivatorOptions { get; set; } = new();
-    [Parameter] public bool ShowActivatorBanner { get; set; }
 
-    [Parameter] public EventCallback<ChangeEventArgs> OnGameIdInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnGameTitleInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnGameChecksumInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnGameEnabledChanged { get; set; }
-    [Parameter] public Action<int, ChangeEventArgs>? OnMasterCodeInput { get; set; }
-    [Parameter] public EventCallback<InputFileChangeEventArgs> OnRomFileSelected { get; set; }
+    private IReadOnlyList<MoveTarget> MoveTargets => Editor.GetCheatMoveTargets();
 
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderTitleInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderDescriptionInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderOneHotChanged { get; set; }
+    private string RemoveItemLabel => Editor.SelectionKind switch
+    {
+        SelectionKind.Folder => "Remove Folder",
+        SelectionKind.Cheat => "Remove Cheat",
+        _ => "Remove Folder or Cheat"
+    };
 
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatTitleInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
-    [Parameter] public EventCallback<string> OnCheatCodeInput { get; set; }
-    [Parameter] public EventCallback<R4Game.CheatActivatorOptions> OnCheatActivatorOptionsChanged { get; set; }
+    private string SortLabel => Editor.SortContainerName == null ? "Sort Top Level A–Z" : "Sort Folder A–Z";
 
-    private bool CanRemoveFolder => Editor.SelectionKind == SelectionKind.Folder;
-    private bool CanRemoveCheat => Editor.SelectionKind == SelectionKind.Cheat;
+    private string SortTitle => Editor.SortContainerName is { } name
+        ? $"Sort the contents of '{name}' by title, folders first"
+        : "Sort the game's top-level folders and cheats by title, folders first";
 
     protected override void OnParametersSet()
     {
-        if (IsOpen && !_wasOpen)
+        if (Game == null)
         {
-            _focusRequested = true;
+            _tab = Tab.Tree;
+            _lastSelectedItem = null;
+            return;
         }
 
-        _wasOpen = IsOpen;
+        // Show the item editor whenever a different folder or cheat is selected or added.
+        var selectedItem = (object?)Editor.SelectedCheat ?? Editor.SelectedFolder;
+        if (selectedItem != null && !ReferenceEquals(selectedItem, _lastSelectedItem))
+        {
+            _tab = Tab.Item;
+        }
+
+        _lastSelectedItem = selectedItem;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusRequested)
+        // Focus the overlay when the modal opens so Escape closes it.
+        if (Game != null && !ReferenceEquals(_focusedGame, Game))
         {
-            _focusRequested = false;
+            _focusedGame = Game;
             await _overlay.FocusAsync();
+        }
+        else if (Game == null)
+        {
+            _focusedGame = null;
         }
     }
 
@@ -144,78 +176,37 @@
 
     private void AddFolder()
     {
-        if (Game == null)
-        {
-            return;
-        }
-
-        Editor.Select(SelectionInfo.ForGame(Game));
+        Editor.Select(SelectionInfo.ForGame(Game!));
         Editor.AddFolder();
     }
 
     private void AddCheat()
     {
-        if (Game == null)
-        {
-            return;
-        }
-
+        // With nothing selected inside the game, add the cheat at the top level.
         if (Editor.SelectedGame == null)
         {
-            Editor.Select(SelectionInfo.ForGame(Game));
+            Editor.Select(SelectionInfo.ForGame(Game!));
         }
 
-        switch (Editor.SelectionKind)
-        {
-            case SelectionKind.Folder or SelectionKind.Game:
-                Editor.AddCheat();
-                return;
-            case SelectionKind.Cheat:
-                Editor.Select(Editor.SelectedFolder != null ? SelectionInfo.ForFolder(Game, Editor.SelectedFolder) : SelectionInfo.ForGame(Game));
-                Editor.AddCheat();
-                return;
-            default:
-                Editor.Select(SelectionInfo.ForGame(Game));
-                Editor.AddCheat();
-                break;
-        }
+        Editor.AddCheat();
     }
 
-    private void RemoveFolder()
+    private void MoveCheatTo(ChangeEventArgs args)
     {
-        if (Editor.SelectionKind != SelectionKind.Folder)
+        var targets = MoveTargets;
+        if (int.TryParse(args.Value?.ToString(), out var index) && index >= 0 && index < targets.Count)
         {
-            return;
+            Commands.MoveSelectedCheat(targets[index].Folder);
         }
 
-        Editor.RemoveSelected();
+        _moveCount++;
     }
 
-    private void RemoveCheat()
+    private async Task RemoveGameAsync()
     {
-        if (Editor.SelectionKind != SelectionKind.Cheat)
+        if (await Commands.RemoveGameAsync(Game!))
         {
-            return;
+            await OnClose.InvokeAsync();
         }
-
-        Editor.RemoveSelected();
     }
-
-    private async Task RemoveGame()
-    {
-        if (Game == null)
-        {
-            return;
-        }
-
-        Editor.Select(SelectionInfo.ForGame(Game));
-        Editor.RemoveSelected();
-        await OnClose.InvokeAsync();
-    }
-
-    private async Task HandleBackdropClick()
-    {
-        await OnClose.InvokeAsync();
-    }
-
 }

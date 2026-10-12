@@ -18,21 +18,18 @@ were designed to edit usrcheat.dat R4 files.
 3. Client-side only, no data leaves your device.
 4. Activator support. Activator keys can now be added to Cheat Codes! These allow users to define what keys should be
    pressed or not pressed for a cheat to run
+5. Works on phones, tablets, and desktops. The layout adapts to your screen size, and on phones the game editor opens
+   full-screen with tabs for cheats, game details, and the selected item.
+6. Undo and redo, with buttons and keyboard shortcuts (Ctrl+Z, and Ctrl+Y or Ctrl+Shift+Z).
+7. Drag and drop to reorder games, folders, and cheats, or to move a cheat into a folder. Works with a mouse, touch,
+   or the keyboard. Folders, cheats, and games can also be sorted A–Z.
+8. Import and export codelist XML, the format used by melonDS-style tools. Exports also keep enabled states, One Hot,
+   and master codes, so they round-trip without loss.
+9. Confirmation before removing games, cheats, or folders with content, and before discarding unsaved changes.
 
 ## Limitations
 
-1. Not all r4cce features have been implemented (See below).
-2. Not yet fully reactive, meaning it requires a display of at least 992x530 pixels to work.
-3. It does not work on most phones due to screen size, but it _does_ work on iPad and potentially foldables like the
-   Samsung Galaxy Z Fold or Google Pixel Fold.
-
-## Planned Features
-
-1. Undo/redo support
-2. Sorting/moving items
-3. Import/export XML
-4. Mobile support (Fully reactive layout)
-5. Confirmation before deleting games or folders that have content or cheats that have been modified from "default"
+1. Not all r4cce features have been implemented.
 
 # Why R4Everyone when r4cce works just fine?
 

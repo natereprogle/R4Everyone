@@ -1,46 +1,30 @@
-window.r4eCheatEditor = window.r4eCheatEditor || {};
-
-window.r4eCheatEditor.getState = function (element) {
-    if (!element) {
-        return { start: 0, end: 0 };
-    }
-
-    return {
-        start: element.selectionStart || 0,
-        end: element.selectionEnd || 0
-    };
-};
-
-window.r4eCheatEditor.setSelection = function (element, start, end) {
-    if (!element || typeof element.setSelectionRange !== "function") {
-        return;
-    }
-
-    element.setSelectionRange(start, end);
-};
-
-window.r4eCheatEditor.bindHexFilter = function (element) {
-    if (!element || element.dataset.hexFilterBound === "true") {
-        return;
-    }
-
-    element.dataset.hexFilterBound = "true";
-    element.addEventListener("keydown", function (event) {
-        if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
-            return;
-        }
-
-        let key = event.key;
-        if (key.length !== 1) {
-            return;
-        }
-
-        if (key === " ") {
-            return;
-        }
-
-        if (!/^[0-9a-fA-F]$/.test(key)) {
-            event.preventDefault();
-        }
+window.r4eCheatEditor = (() => {
+    const getSelection = (element) => ({
+        start: element?.selectionStart ?? 0,
+        end: element?.selectionEnd ?? 0
     });
-};
+
+    const setSelection = (element, start, end) => {
+        element?.setSelectionRange?.(start, end);
+    };
+
+    // Blocks typed characters other than hex digits and spaces. Pasted text is cleaned up by the editor instead.
+    const bindHexFilter = (element) => {
+        if (!element || element.dataset.hexFilterBound === "true") {
+            return;
+        }
+
+        element.dataset.hexFilterBound = "true";
+        element.addEventListener("keydown", (event) => {
+            if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) {
+                return;
+            }
+
+            if (event.key !== " " && !/^[0-9a-fA-F]$/.test(event.key)) {
+                event.preventDefault();
+            }
+        });
+    };
+
+    return { getSelection, setSelection, bindHexFilter };
+})();
