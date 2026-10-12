@@ -28,6 +28,10 @@
                                 freezing. Your open file stays loaded.
                             </li>
                             <li>If cover art can't be loaded, a warning is shown instead of failing quietly.</li>
+                            <li>Files with a blank (<code>00 00 00 00</code>) or unrecognized encoding marker, which
+                                some online cheat databases use, can now be opened. R4Everyone asks which encoding to
+                                use (UTF-8, GBK, Big5, or Shift-JIS), and saving writes the corrected marker.
+                            </li>
                         </ul>
                     </div>
                     <div class="changelog-section">

@@ -25,10 +25,20 @@ public partial class EditorState
     /// <summary>
     /// Loads a cheat database. The current file is left untouched if loading fails.
     /// </summary>
-    public async Task LoadAsync(Stream stream, string fileName)
+    /// <param name="encoding">
+    /// Replaces the file's encoding marker before loading. The file is then marked as changed, so saving writes the
+    /// corrected marker.
+    /// </param>
+    public async Task LoadAsync(byte[] file, string fileName, R4Encoding? encoding = null)
     {
+        if (encoding is { } chosen)
+        {
+            file = DatabaseFileHeader.WithEncoding(file, chosen);
+        }
+
+        using var stream = new MemoryStream(file, writable: false);
         var database = await R4CheatDat.LoadAsync(stream);
-        OpenDatabase(database, fileName);
+        OpenDatabase(database, fileName, isDirty: encoding != null);
     }
 
     public async Task<byte[]> BuildSaveBytesAsync()
@@ -64,12 +74,12 @@ public partial class EditorState
         MarkDirty(game);
     }
 
-    private void OpenDatabase(R4Database database, string fileName)
+    private void OpenDatabase(R4Database database, string fileName, bool isDirty = false)
     {
         Database = database;
         HasLoadedFile = true;
         LoadedFileName = string.IsNullOrWhiteSpace(fileName) ? NewFileName : fileName;
-        IsDirty = false;
+        IsDirty = isDirty;
         ResetCaches();
         ClearSelection();
         Revalidate();

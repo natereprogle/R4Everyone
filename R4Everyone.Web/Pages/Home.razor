@@ -31,6 +31,12 @@
     <GameEditorModal Game="_modalGame" OnClose="CloseGameModal"/>
 
     <ChangelogModal IsOpen="_isChangelogOpen" AppVersion="@Changelog.AppVersion" OnClose="CloseChangelogAsync"/>
+
+    <EncodingPromptModal IsOpen="_pendingOpen != null"
+                         FileName="@(_pendingOpen?.FileName ?? string.Empty)"
+                         Marker="@(_pendingOpen?.Marker ?? string.Empty)"
+                         OnSelected="OpenPendingFileAsync"
+                         OnCancel="CancelPendingOpen"/>
 </div>
 
 @code {
@@ -38,6 +44,9 @@
 
     // The game shown in the editor modal, or null when the modal is closed.
     private R4Game? _modalGame;
+
+    // A file waiting for the user to choose an encoding, or null when no prompt is shown.
+    private PendingOpen? _pendingOpen;
 
     private bool CanSave => Editor.HasLoadedFile && Editor.IsDirty && Editor.IsValid;
     private bool CanRemoveGame => Editor.SelectionKind == SelectionKind.Game;
@@ -123,23 +132,65 @@
     private async Task OpenFileAsync(InputFileChangeEventArgs args)
     {
         var file = args.File;
-        Toasts.ShowInfo($"Opening {file.Name}...");
+        byte[] bytes;
         try
         {
-            // The database is parsed lazily from a seekable copy, so read the whole file into memory.
+            // The database is parsed lazily from an in-memory copy, so read the whole file.
             await using var stream = file.OpenReadStream(long.MaxValue);
             using var buffer = new MemoryStream();
             await stream.CopyToAsync(buffer);
-            buffer.Position = 0;
-
-            _modalGame = null;
-            await Editor.LoadAsync(buffer, file.Name);
-            Toasts.ShowInfo($"Opened {file.Name} ({Editor.Database?.Games.Count ?? 0} games).");
+            bytes = buffer.ToArray();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Could not open {FileName}.", file.Name);
-            Toasts.ShowError($"Could not open {file.Name}: {ex.Message}");
+            Logger.LogError(ex, "Could not read {FileName}.", file.Name);
+            Toasts.ShowError($"Could not read {file.Name}: {ex.Message}");
+            return;
+        }
+
+        if (DatabaseFileHeader.HasUnknownEncodingMarker(bytes, out var marker))
+        {
+            _pendingOpen = new PendingOpen(bytes, file.Name, DatabaseFileHeader.FormatMarker(marker));
+            return;
+        }
+
+        await LoadFileAsync(bytes, file.Name, encoding: null);
+    }
+
+    private async Task OpenPendingFileAsync(R4Encoding encoding)
+    {
+        if (_pendingOpen is not { } pending)
+        {
+            return;
+        }
+
+        _pendingOpen = null;
+        await LoadFileAsync(pending.File, pending.FileName, encoding);
+    }
+
+    private void CancelPendingOpen()
+    {
+        if (_pendingOpen != null)
+        {
+            Toasts.ShowInfo($"Did not open {_pendingOpen.FileName}.");
+            _pendingOpen = null;
+        }
+    }
+
+    private async Task LoadFileAsync(byte[] file, string fileName, R4Encoding? encoding)
+    {
+        Toasts.ShowInfo($"Opening {fileName}...");
+        try
+        {
+            _modalGame = null;
+            await Editor.LoadAsync(file, fileName, encoding);
+            var opened = $"Opened {fileName} ({Editor.Database?.Games.Count ?? 0} games).";
+            Toasts.ShowInfo(encoding == null ? opened : $"{opened} Save it to write the {encoding} encoding marker.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not open {FileName}.", fileName);
+            Toasts.ShowError($"Could not open {fileName}: {ex.Message}");
         }
     }
 
@@ -181,4 +232,6 @@
     {
         Editor.StateChanged -= HandleStateChanged;
     }
+
+    private sealed record PendingOpen(byte[] File, string FileName, string Marker);
 }

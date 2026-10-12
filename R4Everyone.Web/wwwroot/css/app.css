@@ -716,6 +716,73 @@ body {
     color: var(--muted-text);
 }
 
+/* Small confirmation dialogs, such as the encoding prompt. */
+.prompt-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(31, 42, 48, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1070;
+}
+
+.prompt-modal {
+    background: var(--app-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    width: min(520px, 100%);
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 50px rgba(31, 42, 48, 0.25);
+}
+
+.prompt-header,
+.prompt-footer {
+    padding: 0.75rem 1rem;
+    background: var(--panel-header-bg);
+}
+
+.prompt-header {
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 1rem 1rem 0 0;
+}
+
+.prompt-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    border-radius: 0 0 1rem 1rem;
+}
+
+.prompt-body {
+    padding: 1rem;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.encoding-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.encoding-label {
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+.encoding-description {
+    color: var(--muted-text);
+    font-size: 0.9rem;
+}
+
 .game-scoped-tree {
     display: flex;
     flex-direction: column;
@@ -1154,6 +1221,14 @@ body {
         width: 100%;
         height: min(640px, 90dvh);
     }
+
+    .prompt-backdrop {
+        padding: 0.75rem;
+    }
+
+    .prompt-footer .btn {
+        flex: 1;
+    }
 }
 
 /* Phones: two game tiles per row, and master codes in two columns. */
@@ -1183,6 +1258,7 @@ body {
 
     .toast-container {
         left: 0;
+        width: auto;
         padding: 0.75rem !important;
     }
 
