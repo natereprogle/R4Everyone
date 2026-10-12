@@ -34,7 +34,12 @@ public partial class EditorState
             errors.Add($"Game '{title}' GameId must be 4 characters.");
         }
 
-        if (!string.IsNullOrEmpty(game.GameChecksum) && !HexWord.IsValid(game.GameChecksum))
+        // The checksum is required: the file format has no way to store a missing one.
+        if (string.IsNullOrEmpty(game.GameChecksum))
+        {
+            errors.Add($"Game '{title}' needs a checksum. Enter 8 hex characters or calculate it from a ROM.");
+        }
+        else if (!HexWord.IsValid(game.GameChecksum))
         {
             errors.Add($"Game '{title}' checksum must be 8 hex characters.");
         }

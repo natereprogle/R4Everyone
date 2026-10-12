@@ -18,7 +18,7 @@
         <label class="form-label">Checksum</label>
         <input class="form-control" maxlength="8" value="@Game.GameChecksum"
                @oninput="e => Editor.UpdateGameChecksum(Game, ValueOf(e))"/>
-        <div class="form-text">8 hex characters.</div>
+        <div class="form-text">Required. 8 hex characters.</div>
     </div>
     <div class="col-md-4 d-flex align-items-center">
         <div class="form-check mt-md-4">
