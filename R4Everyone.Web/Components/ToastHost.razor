@@ -1,18 +1,17 @@
 @implements IDisposable
 @inject ToastService Toasts
 
-<div class="toast-container position-fixed top-0 end-0 p-3">
+<div class="app-toasts" aria-live="polite">
     @foreach (var toast in Toasts.Toasts)
     {
-        <div class="toast show align-items-center @GetToastClass(toast) mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <div class="toast-tag">@GetToastLabel(toast)</div>
-                    <div class="toast-message">@toast.Message</div>
-                </div>
-                <button type="button" class="btn-close me-2 m-auto" aria-label="Close"
-                        @onclick="() => Toasts.Dismiss(toast.Id)"></button>
+        <div @key="toast.Id" class="app-toast @GetStateClass(toast.State) @(toast.IsClosing ? "is-closing" : string.Empty)"
+             role="@(toast.State == ToastState.Error ? "alert" : "status")">
+            <div class="app-toast-body">
+                <div class="app-toast-label">@GetLabel(toast.State)</div>
+                <div class="app-toast-message">@toast.Message</div>
             </div>
+            <button type="button" class="app-toast-close" aria-label="Dismiss notification"
+                    @onclick="() => Toasts.Dismiss(toast.Id)">&times;</button>
         </div>
     }
 </div>
@@ -28,29 +27,19 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private static string GetToastClass(ToastMessage toast)
+    private static string GetStateClass(ToastState state) => state switch
     {
-        var stateClass = toast.State switch
-        {
-            ToastState.Info => "text-bg-info",
-            ToastState.Warning => "text-bg-warning",
-            ToastState.Error => "text-bg-danger",
-            _ => "text-bg-secondary"
-        };
+        ToastState.Warning => "is-warning",
+        ToastState.Error => "is-error",
+        _ => "is-info"
+    };
 
-        var closingClass = toast.IsClosing ? "toast-exit" : string.Empty;
-        return string.IsNullOrWhiteSpace(closingClass) ? stateClass : $"{stateClass} {closingClass}";
-    }
-
-    private static string GetToastLabel(ToastMessage toast)
+    private static string GetLabel(ToastState state) => state switch
     {
-        return toast.State switch
-        {
-            ToastState.Warning => "WARNING",
-            ToastState.Error => "ERROR",
-            _ => "INFO"
-        };
-    }
+        ToastState.Warning => "Warning",
+        ToastState.Error => "Error",
+        _ => "Info"
+    };
 
     public void Dispose()
     {
