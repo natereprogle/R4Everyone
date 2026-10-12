@@ -16,9 +16,9 @@
     <span class="tree-node-name">@DisplayName</span>
 </div>
 
-@if (Folder != null && IsExpanded)
+@if (IsExpanded && Folder is { } folder)
 {
-    @foreach (var item in Folder.Items)
+    @foreach (var item in folder.Items)
     {
         switch (item)
         {
@@ -26,7 +26,7 @@
                 <TreeNode Game="Game" Folder="nestedFolder" Level="@(Level + 1)"/>
                 break;
             case R4Cheat cheat:
-                <TreeNode Game="Game" Folder="Folder" Cheat="cheat" Level="@(Level + 1)"/>
+                <TreeNode Game="Game" Folder="folder" Cheat="cheat" Level="@(Level + 1)"/>
                 break;
         }
     }
@@ -43,8 +43,9 @@
     [Parameter] public R4Cheat? Cheat { get; set; }
     [Parameter] public int Level { get; set; }
 
+    // A cheat node also carries its parent folder, so the node type must come from Cheat, not Folder.
     private bool IsFolder => Cheat == null;
-    private bool IsExpanded => Folder != null && Editor.IsExpanded(Folder);
+    private bool IsExpanded => IsFolder && Folder != null && Editor.IsExpanded(Folder);
 
     private bool IsSelected => IsFolder
         ? Editor.SelectionKind == SelectionKind.Folder && ReferenceEquals(Editor.SelectedFolder, Folder)
