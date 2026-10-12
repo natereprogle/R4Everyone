@@ -4,7 +4,7 @@ namespace R4Everyone.Web.State;
 
 public sealed class SelectionInfo
 {
-    private SelectionInfo(SelectionKind kind, R4Game? game, R4Folder? folder, R4Cheat? cheat)
+    private SelectionInfo(SelectionKind kind, R4Game game, R4Folder? folder, R4Cheat? cheat)
     {
         Kind = kind;
         Game = game;
@@ -13,7 +13,7 @@ public sealed class SelectionInfo
     }
 
     public SelectionKind Kind { get; }
-    public R4Game? Game { get; }
+    public R4Game Game { get; }
     public R4Folder? Folder { get; }
     public R4Cheat? Cheat { get; }
 

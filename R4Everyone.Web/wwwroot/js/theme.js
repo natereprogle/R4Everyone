@@ -15,29 +15,20 @@ window.r4eTheme = (() => {
         try {
             return localStorage.getItem(storageKey) || "system";
         } catch (error) {
+            console.warn("R4Everyone: could not read the theme preference.", error);
             return "system";
         }
     };
 
+    // The theme is applied even when it cannot be saved, so the toggle still works for this session.
     const setPreference = (preference) => {
+        applyPreference(preference);
         try {
             localStorage.setItem(storageKey, preference);
         } catch (error) {
-            return;
+            console.warn("R4Everyone: could not save the theme preference.", error);
         }
-
-        applyPreference(preference);
     };
 
-    const init = () => {
-        applyPreference(getPreference());
-    };
-
-    return {
-        getPreference,
-        setPreference,
-        init
-    };
+    return { getPreference, setPreference };
 })();
-
-window.r4eTheme.init();

@@ -4,46 +4,43 @@ namespace R4Everyone.Web.State;
 
 public partial class EditorState
 {
-    public void ToggleGameExpand(R4Game game)
+    public bool IsExpanded(object node) => !_expandedState.TryGetValue(node, out var expanded) || expanded;
+
+    public void ToggleExpanded(object node)
     {
-        ToggleExpanded(game);
+        _expandedState[node] = !IsExpanded(node);
+        NotifyStateChanged();
     }
 
-    public void ToggleFolderExpand(R4Folder folder)
+    /// <summary>
+    /// Selects a game, folder, or cheat. Selecting a game that has not been read yet parses it from the file,
+    /// which throws <see cref="InvalidDataException"/> if that part of the file is corrupt.
+    /// </summary>
+    public void Select(SelectionInfo selection)
     {
-        ToggleExpanded(folder);
-    }
-
-    public bool IsExpanded(R4Game game) => GetExpanded(game);
-
-    public bool IsExpanded(R4Folder folder) => GetExpanded(folder);
-
-    public void Select(SelectionInfo? selection)
-    {
-        if (selection == null)
-        {
-            ClearSelection();
-            NotifyStateChanged();
-            return;
-        }
+        var game = selection.Game;
+        Database?.EnsureGameMaterialized(game);
 
         SelectionKind = selection.Kind;
-        SelectedGame = selection.Game;
+        SelectedGame = game;
         SelectedFolder = selection.Folder;
         SelectedCheat = selection.Cheat;
 
-        if (SelectedGame != null)
-        {
-            Database?.EnsureGameMaterialized(SelectedGame);
-            EnsureMasterCodes(SelectedGame);
-            EnsureMasterCodeBuffer(SelectedGame);
-        }
-
+        EnsureMasterCodeBuffer(game);
         if (SelectedCheat != null)
         {
             EnsureCheatCodeBuffer(SelectedCheat);
+            RememberXyMode(SelectedCheat, R4Game.AnalyzeCheatActivator(SelectedCheat).Options);
         }
 
+        // Materializing a game exposes its cheats to validation for the first time.
+        Revalidate();
+        NotifyStateChanged();
+    }
+
+    public void Deselect()
+    {
+        ClearSelection();
         NotifyStateChanged();
     }
 
@@ -53,23 +50,5 @@ public partial class EditorState
         SelectedGame = null;
         SelectedFolder = null;
         SelectedCheat = null;
-    }
-
-    public void Deselect()
-    {
-        ClearSelection();
-        NotifyStateChanged();
-    }
-
-    private bool GetExpanded(object node)
-    {
-        return !_expandedState.TryGetValue(node, out var expanded) || expanded;
-    }
-
-    private void ToggleExpanded(object node)
-    {
-        var next = !GetExpanded(node);
-        _expandedState[node] = next;
-        NotifyStateChanged();
     }
 }

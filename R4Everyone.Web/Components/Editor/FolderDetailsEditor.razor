@@ -1,15 +1,20 @@
+@inject EditorState Editor
+@inject ToastService Toasts
+
 <div class="row g-3">
     <div class="col-12">
         <label class="form-label">Title</label>
-        <input class="form-control" value="@Folder.Title" @oninput="OnFolderTitleInput" />
+        <input class="form-control" value="@Folder.Title"
+               @oninput="e => Editor.UpdateFolderTitle(e.Value?.ToString() ?? string.Empty)"/>
     </div>
     <div class="col-12">
         <label class="form-label">Description</label>
-        <textarea class="form-control" rows="4" @oninput="OnFolderDescriptionInput">@Folder.Description</textarea>
+        <textarea class="form-control" rows="4"
+                  @oninput="e => Editor.UpdateFolderDescription(e.Value?.ToString() ?? string.Empty)">@Folder.Description</textarea>
     </div>
     <div class="col-12">
         <div class="form-check">
-            <input class="form-check-input" type="checkbox" checked="@Folder.OneHot" @onchange="OnFolderOneHotChanged" />
+            <input class="form-check-input" type="checkbox" checked="@Folder.OneHot" @onchange="OnOneHotChanged"/>
             <label class="form-check-label">One Hot</label>
         </div>
         @if (Folder.OneHot)
@@ -20,8 +25,15 @@
 </div>
 
 @code {
-    [Parameter] public R4Folder Folder { get; set; } = null!;
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderTitleInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderDescriptionInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderOneHotChanged { get; set; }
+    [Parameter, EditorRequired] public R4Folder Folder { get; set; } = null!;
+
+    private void OnOneHotChanged(ChangeEventArgs args)
+    {
+        var oneHot = args.Value is true;
+        Editor.UpdateFolderOneHot(oneHot);
+        if (oneHot)
+        {
+            Toasts.ShowWarning("'One Hot' only allows one cheat in a folder to be enabled at a time, and so all cheats except the first 'Enabled' one (if any) have been disabled. If this was unintended, disable One Hot and re-enable your cheats.");
+        }
+    }
 }

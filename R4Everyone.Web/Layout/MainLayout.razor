@@ -1,6 +1,25 @@
 @inherits LayoutComponentBase
 
 <div class="app-root">
-    @Body
-    <ToastHost />
+    <ErrorBoundary @ref="_errorBoundary">
+        <ChildContent>
+            @Body
+        </ChildContent>
+        <ErrorContent>
+            <div class="app-error">
+                <h1 class="h4 mb-0">Something went wrong</h1>
+                <p class="mb-0">The error was logged to the browser console. Your open file is still loaded.</p>
+                <div>
+                    <button type="button" class="btn btn-primary" @onclick="Recover">Return to editor</button>
+                </div>
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
+    <ToastHost/>
 </div>
+
+@code {
+    private ErrorBoundary? _errorBoundary;
+
+    private void Recover() => _errorBoundary?.Recover();
+}

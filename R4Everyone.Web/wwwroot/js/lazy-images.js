@@ -1,25 +1,28 @@
 window.r4eLazyImages = (() => {
-    const observedElements = new WeakSet();
     let observer;
+    let currentRef;
 
-    const ensureObserver = (dotNetRef) => {
-        if (observer) {
-            return observer;
+    const notifyVisible = (gameId) => {
+        if (!currentRef) {
+            return;
         }
 
-        observer = new IntersectionObserver((entries) => {
+        currentRef.invokeMethodAsync("NotifyVisible", gameId)
+            .catch((error) => console.error(`R4Everyone: failed to load cover art for ${gameId}.`, error));
+    };
+
+    const ensureObserver = () => {
+        observer ??= new IntersectionObserver((entries) => {
             for (const entry of entries) {
                 if (!entry.isIntersecting) {
                     continue;
                 }
 
+                observer.unobserve(entry.target);
                 const id = entry.target.dataset.gameId;
                 if (id) {
-                    dotNetRef.invokeMethodAsync("NotifyVisible", id);
+                    notifyVisible(id);
                 }
-
-                observer.unobserve(entry.target);
-                observedElements.delete(entry.target);
             }
         }, {
             rootMargin: "0px 0px 100px 0px",
@@ -29,18 +32,20 @@ window.r4eLazyImages = (() => {
         return observer;
     };
 
+    // Observing an element twice is a no-op, so this can run after every render.
     const observeAll = (dotNetRef) => {
-        const currentObserver = ensureObserver(dotNetRef);
-        const candidates = document.querySelectorAll("[data-game-id]");
-        for (const element of candidates) {
-            if (observedElements.has(element)) {
-                continue;
-            }
-
-            observedElements.add(element);
-            currentObserver.observe(element);
+        currentRef = dotNetRef;
+        const activeObserver = ensureObserver();
+        for (const element of document.querySelectorAll("[data-game-id]")) {
+            activeObserver.observe(element);
         }
     };
 
-    return { observeAll };
+    const disconnect = () => {
+        observer?.disconnect();
+        observer = undefined;
+        currentRef = undefined;
+    };
+
+    return { observeAll, disconnect };
 })();

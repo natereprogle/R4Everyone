@@ -25,7 +25,7 @@
 
     private void HandleToastsChanged()
     {
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private static string GetToastClass(ToastMessage toast)

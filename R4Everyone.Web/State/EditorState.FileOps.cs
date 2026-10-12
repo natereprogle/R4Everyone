@@ -5,35 +5,37 @@ namespace R4Everyone.Web.State;
 
 public partial class EditorState
 {
+    public const string NewFileName = "(new)";
+    public const string DefaultSaveFileName = "cheats.dat";
+
+    // The ROM header holds the game ID at 0x0C; the R4 checksum is the CRC32 of the first 512 bytes.
+    public const int RomHeaderLength = 512;
+    private const int RomGameIdOffset = 0x0C;
+    private const int RomGameIdLength = 4;
+
+    public string SaveFileName => string.IsNullOrWhiteSpace(LoadedFileName) || LoadedFileName == NewFileName
+        ? DefaultSaveFileName
+        : LoadedFileName;
+
     public void NewFile()
     {
-        Database = new R4Database();
-        HasLoadedFile = true;
-        LoadedFileName = "(new)";
-        IsDirty = false;
-        ResetCaches();
-        ClearSelection();
-        Revalidate();
-        NotifyStateChanged();
+        OpenDatabase(new R4Database(), NewFileName);
     }
 
-    public async Task LoadAsync(Stream stream, string? fileName)
+    /// <summary>
+    /// Loads a cheat database. The current file is left untouched if loading fails.
+    /// </summary>
+    public async Task LoadAsync(Stream stream, string fileName)
     {
-        Database = await R4CheatDat.LoadAsync(stream);
-        HasLoadedFile = true;
-        LoadedFileName = string.IsNullOrWhiteSpace(fileName) ? "(loaded)" : fileName;
-        IsDirty = false;
-        ResetCaches();
-        ClearSelection();
-        Revalidate();
-        NotifyStateChanged();
+        var database = await R4CheatDat.LoadAsync(stream);
+        OpenDatabase(database, fileName);
     }
 
-    public async Task<byte[]?> BuildSaveBytesAsync()
+    public async Task<byte[]> BuildSaveBytesAsync()
     {
         if (Database == null)
         {
-            return null;
+            throw new InvalidOperationException("There is no open file to save.");
         }
 
         await using var memStream = new MemoryStream();
@@ -47,40 +49,53 @@ public partial class EditorState
         NotifyStateChanged();
     }
 
-    public void ApplyRomMetadata(byte[] headerBytes)
+    /// <summary>
+    /// Sets a game's ID and checksum from the start of a ROM file.
+    /// </summary>
+    public void ApplyRomHeader(R4Game game, byte[] header)
     {
-        if (SelectedGame == null || headerBytes.Length < 0x10)
+        if (header.Length < RomGameIdOffset + RomGameIdLength)
         {
-            return;
+            throw new InvalidDataException("The ROM file is too small to contain a valid header.");
         }
 
-        var idBytes = headerBytes.Skip(0x0C).Take(4).ToArray();
-        var gameId = Encoding.ASCII.GetString(idBytes);
-        var checksum = Crc32Helper.ConvertCrc32ToString(Crc32Helper.CalculateCrc32(headerBytes)).ToUpper();
+        game.GameId = Encoding.ASCII.GetString(header, RomGameIdOffset, RomGameIdLength);
+        game.GameChecksum = Crc32Helper.ConvertCrc32ToString(Crc32Helper.CalculateCrc32(header)).ToUpperInvariant();
+        MarkDirty(game);
+    }
 
-        SelectedGame.GameId = gameId;
-        SelectedGame.GameChecksum = checksum;
-        MarkDirty();
+    private void OpenDatabase(R4Database database, string fileName)
+    {
+        Database = database;
+        HasLoadedFile = true;
+        LoadedFileName = string.IsNullOrWhiteSpace(fileName) ? NewFileName : fileName;
+        IsDirty = false;
+        ResetCaches();
+        ClearSelection();
+        Revalidate();
+        NotifyStateChanged();
     }
 
     private void ResetCaches()
     {
         _masterCodeText.Clear();
-        _cheatCodeText.Clear();
+        _cheatCodeWords.Clear();
+        _xyModePreference.Clear();
         _expandedState.Clear();
         _validationErrors = [];
     }
 
-    private void EnsureDatabase()
+    private R4Database EnsureDatabase()
     {
         if (Database != null)
         {
-            return;
+            return Database;
         }
 
         Database = new R4Database();
         HasLoadedFile = true;
-        LoadedFileName = "(new)";
+        LoadedFileName = NewFileName;
         IsDirty = false;
+        return Database;
     }
 }

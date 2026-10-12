@@ -836,3 +836,125 @@ body {
         overflow: auto;
     }
 }
+
+/* Shown by Blazor when an unhandled error stops the app. */
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 2000;
+    padding: 0.75rem 3rem 0.75rem 1.25rem;
+    background: #9c3f3f;
+    color: #ffffff;
+    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.3);
+}
+
+#blazor-error-ui .reload {
+    color: inherit;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+#blazor-error-ui .dismiss {
+    position: absolute;
+    right: 1rem;
+    top: 0.5rem;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+/* Shown by the layout's ErrorBoundary when a component fails. */
+.app-error {
+    height: 100%;
+    display: grid;
+    place-content: center;
+    gap: 0.75rem;
+    text-align: center;
+    padding: 2rem;
+}
+
+/* Cheat activator editor */
+.activator-notice {
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    background: var(--highlight);
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.55rem;
+    color: var(--text-color);
+}
+
+.activator-button-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(64px, 1fr));
+    gap: 0.5rem;
+}
+
+.activator-tile {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background: var(--panel-bg);
+    color: var(--text-color);
+    padding: 0.45rem 0.4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.12rem;
+    min-height: 56px;
+}
+
+.activator-tile-key {
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.activator-tile-state {
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+.activator-tile.is-ignore {
+    opacity: 0.7;
+}
+
+.activator-tile.is-hold {
+    border-color: #2c7a4b;
+    background: color-mix(in srgb, #2c7a4b 13%, var(--panel-bg));
+}
+
+.activator-tile.is-release {
+    border-color: #9c3f3f;
+    background: color-mix(in srgb, #9c3f3f 13%, var(--panel-bg));
+}
+
+.activator-legend {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted-text);
+}
+
+.activator-subtitle {
+    margin-top: 0.2rem;
+    font-size: 0.82rem;
+    color: var(--muted-text);
+    max-width: 40rem;
+    line-height: 1.25;
+}
+
+@media (max-width: 1200px) {
+    .activator-button-grid {
+        grid-template-columns: repeat(4, minmax(64px, 1fr));
+    }
+}
+
+@media (max-width: 780px) {
+    .activator-button-grid {
+        grid-template-columns: repeat(3, minmax(64px, 1fr));
+    }
+}

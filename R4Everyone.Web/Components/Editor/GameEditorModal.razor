@@ -1,9 +1,8 @@
 @inject EditorState Editor
 
-@if (IsOpen && Game != null)
+@if (Game != null)
 {
-    <div class="game-modal-backdrop" @onclick="HandleBackdropClick" @onkeydown="HandleKeyDown" tabindex="0"
-         @ref="_overlay">
+    <div class="game-modal-backdrop" @onclick="OnClose" @onkeydown="HandleKeyDown" tabindex="0" @ref="_overlay">
         <div class="game-modal" @onclick:stopPropagation="true">
             <div class="game-modal-header">
                 <div class="modal-title">@EditorState.GetGameDisplayTitle(Game)</div>
@@ -17,11 +16,11 @@
                             <div class="modal-actions action-grid">
                                 <button type="button" class="btn btn-success" @onclick="AddFolder">Add Folder</button>
                                 <button type="button" class="btn btn-success" @onclick="AddCheat">Add Cheat</button>
-                                <button type="button" class="btn btn-danger" @onclick="RemoveFolder"
-                                        disabled="@(!CanRemoveFolder)">Remove Folder
+                                <button type="button" class="btn btn-danger" @onclick="Editor.RemoveSelectedItem"
+                                        disabled="@(Editor.SelectionKind != SelectionKind.Folder)">Remove Folder
                                 </button>
-                                <button type="button" class="btn btn-danger" @onclick="RemoveCheat"
-                                        disabled="@(!CanRemoveCheat)">Remove Cheat
+                                <button type="button" class="btn btn-danger" @onclick="Editor.RemoveSelectedItem"
+                                        disabled="@(Editor.SelectionKind != SelectionKind.Cheat)">Remove Cheat
                                 </button>
                                 <button type="button" class="btn btn-danger" @onclick="RemoveGame">Remove Game</button>
                             </div>
@@ -33,15 +32,7 @@
                     <div class="card panel-card shadow-sm">
                         <div class="card-header">Game Details</div>
                         <div class="card-body panel-body">
-                            <GameDetailsEditor
-                                Game="Game"
-                                MasterCodes="MasterCodes"
-                                OnGameIdInput="OnGameIdInput"
-                                OnGameTitleInput="OnGameTitleInput"
-                                OnGameChecksumInput="OnGameChecksumInput"
-                                OnGameEnabledChanged="OnGameEnabledChanged"
-                                OnMasterCodeInput="OnMasterCodeInput"
-                                OnRomFileSelected="OnRomFileSelected"/>
+                            <GameDetailsEditor Game="Game"/>
                         </div>
                     </div>
                     <div class="card panel-card shadow-sm">
@@ -50,26 +41,11 @@
                             @switch (Editor.SelectionKind)
                             {
                                 case SelectionKind.Folder when Editor.SelectedFolder != null:
-                                    <FolderDetailsEditor
-                                        Folder="Editor.SelectedFolder"
-                                        OnFolderTitleInput="OnFolderTitleInput"
-                                        OnFolderDescriptionInput="OnFolderDescriptionInput"
-                                        OnFolderOneHotChanged="OnFolderOneHotChanged"/>
+                                    <FolderDetailsEditor Folder="Editor.SelectedFolder"/>
                                     break;
                                 case SelectionKind.Cheat when Editor.SelectedCheat != null:
-                                    <CheatDetailsEditor
-                                        Cheat="Editor.SelectedCheat"
-                                        CheatCodeText="@CheatCodeText"
-                                        CheatActivatorOptions="CheatActivatorOptions"
-                                        ShowActivatorBanner="ShowActivatorBanner"
-                                        OnCheatTitleInput="OnCheatTitleInput"
-                                        OnCheatDescriptionInput="OnCheatDescriptionInput"
-                                        OnCheatEnabledChanged="OnCheatEnabledChanged"
-                                        OnCheatCodeInput="OnCheatCodeInput"
-                                        OnCheatActivatorOptionsChanged="OnCheatActivatorOptionsChanged"/>
+                                    <CheatDetailsEditor Cheat="Editor.SelectedCheat"/>
                                     break;
-                                case SelectionKind.None:
-                                case SelectionKind.Game:
                                 default:
                                     <div class="empty-state">Select a folder or cheat to edit.</div>
                                     break;
@@ -84,53 +60,26 @@
 
 @code {
     private ElementReference _overlay;
-    private bool _focusRequested;
-    private bool _wasOpen;
+    private R4Game? _focusedGame;
 
-    [Parameter] public bool IsOpen { get; set; }
+    /// <summary>
+    /// The game being edited. The modal is open while this is set.
+    /// </summary>
     [Parameter] public R4Game? Game { get; set; }
+
     [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public string[] MasterCodes { get; set; } = [];
-    [Parameter] public string CheatCodeText { get; set; } = string.Empty;
-    [Parameter] public R4Game.CheatActivatorOptions CheatActivatorOptions { get; set; } = new();
-    [Parameter] public bool ShowActivatorBanner { get; set; }
-
-    [Parameter] public EventCallback<ChangeEventArgs> OnGameIdInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnGameTitleInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnGameChecksumInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnGameEnabledChanged { get; set; }
-    [Parameter] public Action<int, ChangeEventArgs>? OnMasterCodeInput { get; set; }
-    [Parameter] public EventCallback<InputFileChangeEventArgs> OnRomFileSelected { get; set; }
-
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderTitleInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderDescriptionInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnFolderOneHotChanged { get; set; }
-
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatTitleInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatDescriptionInput { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnCheatEnabledChanged { get; set; }
-    [Parameter] public EventCallback<string> OnCheatCodeInput { get; set; }
-    [Parameter] public EventCallback<R4Game.CheatActivatorOptions> OnCheatActivatorOptionsChanged { get; set; }
-
-    private bool CanRemoveFolder => Editor.SelectionKind == SelectionKind.Folder;
-    private bool CanRemoveCheat => Editor.SelectionKind == SelectionKind.Cheat;
-
-    protected override void OnParametersSet()
-    {
-        if (IsOpen && !_wasOpen)
-        {
-            _focusRequested = true;
-        }
-
-        _wasOpen = IsOpen;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusRequested)
+        // Focus the overlay when the modal opens so Escape closes it.
+        if (Game != null && !ReferenceEquals(_focusedGame, Game))
         {
-            _focusRequested = false;
+            _focusedGame = Game;
             await _overlay.FocusAsync();
+        }
+        else if (Game == null)
+        {
+            _focusedGame = null;
         }
     }
 
@@ -144,78 +93,24 @@
 
     private void AddFolder()
     {
-        if (Game == null)
-        {
-            return;
-        }
-
-        Editor.Select(SelectionInfo.ForGame(Game));
+        Editor.Select(SelectionInfo.ForGame(Game!));
         Editor.AddFolder();
     }
 
     private void AddCheat()
     {
-        if (Game == null)
-        {
-            return;
-        }
-
+        // With nothing selected inside the game, add the cheat at the top level.
         if (Editor.SelectedGame == null)
         {
-            Editor.Select(SelectionInfo.ForGame(Game));
+            Editor.Select(SelectionInfo.ForGame(Game!));
         }
 
-        switch (Editor.SelectionKind)
-        {
-            case SelectionKind.Folder or SelectionKind.Game:
-                Editor.AddCheat();
-                return;
-            case SelectionKind.Cheat:
-                Editor.Select(Editor.SelectedFolder != null ? SelectionInfo.ForFolder(Game, Editor.SelectedFolder) : SelectionInfo.ForGame(Game));
-                Editor.AddCheat();
-                return;
-            default:
-                Editor.Select(SelectionInfo.ForGame(Game));
-                Editor.AddCheat();
-                break;
-        }
-    }
-
-    private void RemoveFolder()
-    {
-        if (Editor.SelectionKind != SelectionKind.Folder)
-        {
-            return;
-        }
-
-        Editor.RemoveSelected();
-    }
-
-    private void RemoveCheat()
-    {
-        if (Editor.SelectionKind != SelectionKind.Cheat)
-        {
-            return;
-        }
-
-        Editor.RemoveSelected();
+        Editor.AddCheat();
     }
 
     private async Task RemoveGame()
     {
-        if (Game == null)
-        {
-            return;
-        }
-
-        Editor.Select(SelectionInfo.ForGame(Game));
-        Editor.RemoveSelected();
+        Editor.RemoveGame(Game!);
         await OnClose.InvokeAsync();
     }
-
-    private async Task HandleBackdropClick()
-    {
-        await OnClose.InvokeAsync();
-    }
-
 }
