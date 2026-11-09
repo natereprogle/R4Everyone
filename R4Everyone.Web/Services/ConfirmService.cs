@@ -1,6 +1,7 @@
 namespace R4Everyone.Web.Services;
 
-public sealed record ConfirmRequest(string Title, string Message, string ConfirmLabel, bool IsDestructive = true);
+public sealed record ConfirmRequest(string Title, string Message, string ConfirmLabel, bool IsDestructive = true,
+    string CancelLabel = "Cancel");
 
 /// <summary>
 /// Asks the user to confirm an action. The dialog itself is rendered by ConfirmHost.

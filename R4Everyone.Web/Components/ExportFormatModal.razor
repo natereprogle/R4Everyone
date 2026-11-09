@@ -1,0 +1,148 @@
+@if (IsOpen)
+{
+    <div class="prompt-backdrop" @onclick="OnCancel">
+        <div class="prompt-modal" role="dialog" aria-modal="true" aria-labelledby="export-format-title"
+             @onclick:stopPropagation="true">
+            <div class="prompt-header">
+                <div class="modal-title" id="export-format-title">Export as…</div>
+            </div>
+            <div class="prompt-body">
+                <p class="mb-0">Download the open file in another cheat format. The open file is not changed.</p>
+
+                <div class="encoding-options" role="radiogroup" aria-label="Format">
+                    @foreach (var (format, description) in Formats)
+                    {
+                        var id = $"export-format-{format}";
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="export-format" id="@id"
+                                   checked="@(_format == format)" @onchange="() => _format = format"/>
+                            <label class="form-check-label" for="@id">
+                                <span class="encoding-label">@R4CheatFormats.GetDisplayName(format)</span>
+                                <span class="encoding-description">
+                                    @R4CheatFormats.GetFileExtension(format) · @description
+                                </span>
+                            </label>
+                        </div>
+                    }
+                </div>
+
+                @if (_format == R4CheatFormat.M3Real)
+                {
+                    <div class="export-options">
+                        <div class="export-option">
+                            <label class="form-label" for="m3-mode">Folder style</label>
+                            <select class="form-select form-select-sm" id="m3-mode" @bind="_m3Mode">
+                                <option value="@R4M3RealMode.Extended">Extended (recommended)</option>
+                                <option value="@R4M3RealMode.Dht">DHT</option>
+                            </select>
+                        </div>
+                        <div class="export-option">
+                            <label class="form-label" for="m3-notes">Notes</label>
+                            <select class="form-select form-select-sm" id="m3-notes" @bind="_m3NotePosition">
+                                <option value="@R4M3RealNotePosition.BeforeName">Before the name</option>
+                                <option value="@R4M3RealNotePosition.AfterName">After the name</option>
+                            </select>
+                        </div>
+                        <div class="export-option">
+                            <label class="form-label" for="m3-encoding">Text encoding</label>
+                            <select class="form-select form-select-sm" id="m3-encoding" @bind="_m3Encoding">
+                                <option value="@R4Encoding.SJIS">Shift-JIS (Japanese)</option>
+                                <option value="@R4Encoding.GBK">GBK (Simplified Chinese)</option>
+                                <option value="@R4Encoding.BIG5">Big5 (Traditional Chinese)</option>
+                                <option value="@R4Encoding.UTF8">UTF-8</option>
+                            </select>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="m3-charfix" @bind="_m3CharacterFix"/>
+                            <label class="form-check-label" for="m3-charfix">
+                                Character fix
+                                <span class="encoding-description">
+                                    Replaces brackets and characters that would cut names short on the cart.
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                }
+
+                <p class="form-text mb-0">
+                    @if (_format == R4CheatFormat.R4)
+                    {
+                        @:Saves everything R4Everyone edits.
+                    }
+                    else
+                    {
+                        @:This format does not store the database title, master codes, or game enable flags.
+                        @if (_format != R4CheatFormat.M3Real)
+                        {
+                            @: Folders inside folders are merged into their top-level folder.
+                        }
+                        else
+                        {
+                            @: Cheat on/off states are not stored, so cheats open turned off.
+                        }
+                    }
+                </p>
+            </div>
+            <div class="prompt-footer">
+                <button type="button" class="btn btn-outline-secondary" @onclick="OnCancel">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="ExportAsync">Download</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly (R4CheatFormat Format, string Description)[] Formats =
+    [
+        (R4CheatFormat.R4, "R4, R4i, and compatible carts"),
+        (R4CheatFormat.CycloDsEvolution, "CycloDS Evolution"),
+        (R4CheatFormat.Edge, "EDGE"),
+        (R4CheatFormat.M3Real, "M3 DS Real")
+    ];
+
+    private R4CheatFormat _format = R4CheatFormat.CycloDsEvolution;
+    private R4M3RealMode _m3Mode = R4M3RealMode.Extended;
+    private R4M3RealNotePosition _m3NotePosition = R4M3RealNotePosition.BeforeName;
+    private R4Encoding _m3Encoding = R4Encoding.SJIS;
+    private bool _m3CharacterFix = true;
+    private bool _wasOpen;
+
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>
+    /// The settings of an open M3 DS Real file, preselected when the modal opens.
+    /// </summary>
+    [Parameter] public R4M3RealOptions? M3RealDefaults { get; set; }
+
+    [Parameter] public EventCallback<ExportRequest> OnExport { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !_wasOpen && M3RealDefaults is { } defaults)
+        {
+            _m3Mode = defaults.Mode;
+            _m3NotePosition = defaults.NotePosition;
+            _m3Encoding = defaults.Encoding;
+            _m3CharacterFix = defaults.CharacterFix;
+        }
+
+        _wasOpen = IsOpen;
+    }
+
+    private Task ExportAsync()
+    {
+        var m3Options = _format == R4CheatFormat.M3Real
+            ? new R4M3RealOptions
+            {
+                Mode = _m3Mode,
+                NotePosition = _m3NotePosition,
+                Encoding = _m3Encoding,
+                CharacterFix = _m3CharacterFix
+            }
+            : null;
+        return OnExport.InvokeAsync(new ExportRequest(_format, m3Options));
+    }
+
+    public sealed record ExportRequest(R4CheatFormat Format, R4M3RealOptions? M3RealOptions);
+}

@@ -1,0 +1,61 @@
+@if (IsOpen)
+{
+    <div class="changelog-backdrop" @onclick="OnClose">
+        <div class="changelog-modal about-modal" role="dialog" aria-modal="true" aria-labelledby="about-title"
+             @onclick:stopPropagation="true">
+            <div class="changelog-header">
+                <div>
+                    <div class="modal-title" id="about-title">About R4Everyone</div>
+                    <div class="changelog-version">Version @AppVersion</div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnClose">Close</button>
+            </div>
+            <div class="changelog-body about-body">
+                <div class="about-intro">
+                    <img class="about-logo" src="icon-192.png" alt="" />
+                    <p>
+                        R4Everyone is a cheat database editor for R4, CycloDS Evolution, EDGE, and M3 DS Real
+                        flashcarts that runs entirely in your browser.
+                    </p>
+                </div>
+
+                <dl class="about-list">
+                    <dt>Written by</dt>
+                    <dd><a href="@AuthorUrl" target="_blank" rel="noopener noreferrer">Nate Reprogle</a></dd>
+
+                    <dt>Source code</dt>
+                    <dd><a href="@RepositoryUrl" target="_blank" rel="noopener noreferrer">GitHub</a></dd>
+
+                    <dt>Cover art</dt>
+                    <dd>
+                        Game covers and game information are provided by
+                        <a href="https://www.gametdb.com/" target="_blank" rel="noopener noreferrer">GameTDB</a>.
+                        Thank you to everyone who contributes to it!
+                    </dd>
+
+                    <dt>Copyright</dt>
+                    <dd>&copy; 2024&ndash;@DateTime.Now.Year Nate Reprogle</dd>
+
+                    <dt>License</dt>
+                    <dd>@License</dd>
+                </dl>
+
+                <p class="about-disclaimer">
+                    R4Everyone is not affiliated with Nintendo or with any flashcart maker. Game covers belong to
+                    their respective owners.
+                </p>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const string AuthorUrl = "https://github.com/natereprogle";
+    private const string RepositoryUrl = "https://github.com/natereprogle/R4Everyone";
+    
+    private const string License = "Licensed under the MIT License.";
+
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string AppVersion { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnClose { get; set; }
+}

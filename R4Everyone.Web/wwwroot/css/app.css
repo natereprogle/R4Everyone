@@ -855,6 +855,59 @@ body {
     color: var(--muted-text);
 }
 
+.about-button .about-dot {
+    fill: currentColor;
+}
+
+.about-modal {
+    width: min(560px, 92vw);
+    height: auto;
+    max-height: 85vh;
+}
+
+.about-body {
+    gap: 1rem;
+}
+
+.about-intro {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.about-intro p {
+    margin: 0;
+}
+
+.about-logo {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+.about-list {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 1rem;
+    row-gap: 0.6rem;
+    margin: 0;
+}
+
+.about-list dt {
+    font-weight: 600;
+    color: var(--accent-light);
+}
+
+.about-list dd {
+    margin: 0;
+}
+
+.about-disclaimer {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted-text);
+}
+
 /* Small confirmation dialogs, such as the encoding prompt. */
 .prompt-backdrop {
     position: fixed;
@@ -883,6 +936,7 @@ body {
 .prompt-footer {
     padding: 0.75rem 1rem;
     background: var(--panel-header-bg);
+    flex-shrink: 0;
 }
 
 .prompt-header {
@@ -901,9 +955,12 @@ body {
 .prompt-body {
     padding: 1rem;
     overflow: auto;
+    overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    /* File names often have no spaces; let them wrap instead of widening the dialog. */
+    overflow-wrap: anywhere;
 }
 
 .encoding-options {
@@ -920,6 +977,20 @@ body {
 .encoding-description {
     color: var(--muted-text);
     font-size: 0.9rem;
+}
+
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+}
+
+.export-option .form-label {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
 }
 
 .game-scoped-tree {
@@ -1341,12 +1412,69 @@ body {
         height: min(640px, 90dvh);
     }
 
+    .about-modal {
+        height: auto;
+        max-height: 90dvh;
+    }
+
+    /* Stack labels above their values on narrow screens. */
+    .about-list {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 0.15rem;
+    }
+
+    .about-list dd {
+        margin-bottom: 0.5rem;
+    }
+
+    .about-logo {
+        width: 48px;
+        height: 48px;
+    }
+
     .prompt-backdrop {
         padding: 0.75rem;
     }
 
     .prompt-footer .btn {
         flex: 1;
+    }
+}
+
+/* Very small phones: dialogs use almost the whole screen and tighter spacing. */
+@media (max-width: 400px) {
+    .prompt-backdrop {
+        padding: 0.5rem;
+    }
+
+    .prompt-header,
+    .prompt-footer {
+        padding: 0.6rem 0.75rem;
+    }
+
+    .prompt-body {
+        padding: 0.75rem;
+    }
+
+    .export-options {
+        padding: 0.5rem;
+    }
+
+    .encoding-label {
+        display: block;
+        margin-right: 0;
+    }
+}
+
+/* Short screens, such as phones in landscape: keep dialog chrome compact so the options stay visible. */
+@media (max-height: 480px) {
+    .prompt-backdrop {
+        padding: 0.5rem;
+    }
+
+    .prompt-header,
+    .prompt-footer {
+        padding: 0.4rem 0.75rem;
     }
 }
 
@@ -1407,5 +1535,22 @@ body {
     .theme-icon {
         width: 2.5rem;
         height: 2.5rem;
+    }
+
+    /* Larger hit areas for dialog radio buttons and checkboxes. */
+    .prompt-body .form-check {
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .prompt-body .form-check-input {
+        width: 1.25em;
+        height: 1.25em;
+        margin-top: 0.125em;
+    }
+
+    .prompt-body .form-select {
+        min-height: 2.5rem;
+        font-size: 1rem;
     }
 }

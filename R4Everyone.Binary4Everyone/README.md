@@ -77,6 +77,47 @@ await using var output = new MemoryStream();
 await R4CheatDat.SaveAsync(db, output);
 ```
 
+Other cheat formats
+The library also reads and writes the formats r4cce supports:
+
+| Format | Extension | Read | Write | Class |
+|---|---|---|---|---|
+| R4 usrcheat.dat | .dat | yes | yes | R4CheatDat |
+| CycloDS Evolution | .evoCheats | yes | yes | R4EvolutionCheats |
+| EDGE | .dat | yes | yes | R4EvolutionCheats |
+| M3 DS Real | .db | yes | yes | R4M3RealDb |
+
+R4CheatFormats detects a file's format from its magic bytes (or, for M3 DS Real, its index structure) and dispatches
+to the right codec:
+```csharp
+var (db, format) = await R4CheatFormats.LoadAsync(File.ReadAllBytes("user.evoCheats"));
+var edge = await R4CheatFormats.SaveAsync(db, R4CheatFormat.Edge);
+var m3 = await R4CheatFormats.SaveAsync(db, R4CheatFormat.M3Real,
+    new R4M3RealOptions { Mode = R4M3RealMode.Dht, Encoding = R4Encoding.SJIS });
+
+// M3 DS Real files don't record their settings. Inspect guesses them; pass known values to override.
+var info = R4M3RealDb.Inspect(m3);
+var reread = R4M3RealDb.Load(m3, new R4M3RealReadOptions { Encoding = R4Encoding.GBK });
+var sameBytes = R4M3RealDb.Export(reread, info.ToWriteOptions());
+```
+
+- CycloDS Evolution and EDGE files are RC4-encrypted, zlib-compressed, and MD5-checked. Loading throws
+  InvalidDataException if a check fails. They store UTF-8 text, one level of folders, and on/off states, but not
+  the database title, master codes, or game enable flags. Nested folders are merged into their top-level folder on
+  save. R4EvolutionCheats.FindOverlongCheats lists cheats over 255 rows, which carts may reject.
+- M3 DS Real does not store on/off states, master codes, or game enable flags, so cheats load disabled.
+  Extended mode loses the One Hot flag; DHT mode loses notes and game titles (the game ID is used instead). The file
+  doesn't record its encoding, note position, mode, or Character Fix; R4M3RealDb.Inspect detects UTF-8 (otherwise it
+  assumes Shift-JIS, since GBK and Big5 can't be told apart), the note position, the mode, and whether names are
+  already character-fixed. Text changed by Character Fix can't be restored. The "Character Fix" option checks each
+  character's own encoded bytes rather than r4cce's previous-byte test, so it is also correct for UTF-8, GBK, and Big5.
+- Games loaded from these formats are fully materialized and marked dirty.
+- R4Md5 is a managed MD5 for Blazor WebAssembly, where System.Security.Cryptography.MD5 is not supported.
+- CycloDS Evolution and EDGE files are saved with the creator tag R4CheatFormats.CreatorTag (`R4EO`) at inner-header
+  offset 0x24, where r4cce writes `USAY`; r4cce still opens these files but may call them unofficial when overwriting
+  them. R4CheatFormats.IsCreatedByR4Everyone checks the tag. R4 and M3 DS Real files have no creator field and are
+  written without any marker (R4CheatFormats.HasCreatorTag returns false for them).
+
 Activator helpers (R4Game)
 ```csharp
 using R4Everyone.Binary4Everyone;

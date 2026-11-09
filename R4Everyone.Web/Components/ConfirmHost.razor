@@ -14,7 +14,7 @@
             </div>
             <div class="prompt-footer">
                 <button type="button" class="btn btn-outline-secondary" @onclick="() => Confirm.Respond(false)"
-                        @ref="_cancelButton">Cancel
+                        @ref="_cancelButton">@request.CancelLabel
                 </button>
                 <button type="button" class="btn @(request.IsDestructive ? "btn-danger" : "btn-primary")"
                         @onclick="() => Confirm.Respond(true)">@request.ConfirmLabel

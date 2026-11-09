@@ -1,6 +1,7 @@
 {
   "name": "R4Everyone",
   "short_name": "R4Everyone",
+  "description": "An offline, WASM powered, web-based app for editing cheat files for Nintendo DS flashcarts.",
   "id": "./",
   "start_url": "./",
   "display": "standalone",
@@ -17,6 +18,14 @@
       "src": "icon-192.png",
       "type": "image/png",
       "sizes": "192x192"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/desktop-screenshot.webp",
+      "sizes": "3319x1868",
+      "type": "image/webp",
+      "form_factor": "wide"
     }
   ]
 }

@@ -5,6 +5,7 @@
 @inject ConfirmService Confirm
 @inject KeyboardShortcutService Shortcuts
 @inject ChangelogService Changelog
+@inject FileWarningService FileWarnings
 @inject FileDownloadService FileDownload
 @inject GameTdbService GameTdb
 @inject ToastService Toasts
@@ -14,7 +15,7 @@
 
 <div class="app-shell">
     <AppHeaderBar FileName="@Editor.LoadedFileName" HasLoadedFile="Editor.HasLoadedFile" IsDirty="Editor.IsDirty"
-                  ErrorCount="Editor.ValidationErrors.Count" OnShowChangelog="OpenChangelog"/>
+                  ErrorCount="Editor.ValidationErrors.Count" OnShowChangelog="OpenChangelog" OnShowAbout="() => _isAboutOpen = true"/>
 
     <div class="app-body">
         <aside class="app-sidebar">
@@ -23,6 +24,7 @@
                                OnNew="NewFileAsync"
                                OnOpen="OpenFileAsync"
                                OnSave="SaveAsync"
+                               OnExportAs="OpenExportModal"
                                OnImportXml="ImportXmlAsync"
                                OnExportXml="ExportXmlAsync"/>
 
@@ -47,28 +49,55 @@
 
     <ChangelogModal IsOpen="_isChangelogOpen" AppVersion="@Changelog.AppVersion" OnClose="CloseChangelogAsync"/>
 
+        <AboutModal IsOpen="_isAboutOpen" AppVersion="@Changelog.AppVersion" OnClose="() => _isAboutOpen = false"/>
+    <UnofficialFileWarningModal IsOpen="_pendingUnofficialOpen != null"
+                                FileName="@(_pendingUnofficialOpen?.FileName ?? string.Empty)"
+                                OnUnderstood="ContinueUnofficialOpenAsync"
+                                OnDontWarnAgain="DisableUnofficialWarningAndContinueAsync"/>
+
     <EncodingPromptModal IsOpen="_pendingOpen != null"
                          FileName="@(_pendingOpen?.FileName ?? string.Empty)"
                          Marker="@(_pendingOpen?.Marker ?? string.Empty)"
                          OnSelected="OpenPendingFileAsync"
                          OnCancel="CancelPendingOpen"/>
+
+    <M3RealOpenModal IsOpen="_pendingM3Open != null"
+                     FileName="@(_pendingM3Open?.FileName ?? string.Empty)"
+                     Detected="_pendingM3Open?.Detected"
+                     OnSelected="OpenPendingM3FileAsync"
+                     OnCancel="CancelPendingM3Open"/>
+
+    <ExportFormatModal IsOpen="_isExportOpen" M3RealDefaults="Editor.M3RealOptions" OnExport="ExportAsync"
+                       OnCancel="CloseExportModal"/>
 </div>
 
 @code {
+    private const long LargeFileThreshold = 5 * 1024 * 1024;
+
     private bool _isChangelogOpen;
+    private bool _isAboutOpen;
+    private bool _isExportOpen;
 
     // The game shown in the editor modal, or null when the modal is closed.
     private R4Game? _modalGame;
 
+    // A file from another tool waiting for the user to acknowledge it may not read properly.
+    private PendingUnofficialOpen? _pendingUnofficialOpen;
+
     // A file waiting for the user to choose an encoding, or null when no prompt is shown.
     private PendingOpen? _pendingOpen;
+
+    // An M3 DS Real file waiting for the user to confirm its settings, or null when no prompt is shown.
+    private PendingM3Open? _pendingM3Open;
 
     private bool CanSave => Editor.HasLoadedFile && Editor.IsDirty && Editor.IsValid;
     private bool CanRemoveGame => Editor.SelectionKind == SelectionKind.Game;
     private bool HasGames => Editor.Database?.Games.Count > 0;
 
     // Shortcuts are ignored while a dialog is open, so undo cannot change what the dialog is about.
-    private bool IsDialogOpen => Confirm.Current != null || _pendingOpen != null;
+    private bool IsDialogOpen =>
+        Confirm.Current != null || _pendingUnofficialOpen != null || _pendingOpen != null || _pendingM3Open != null ||
+        _isExportOpen;
 
     protected override void OnInitialized()
     {
@@ -176,6 +205,16 @@
     private async Task OpenFileAsync(InputFileChangeEventArgs args)
     {
         var file = args.File;
+
+        // Ask before reading, since reading and parsing a large file can block the browser's only thread.
+        if (file.Size > LargeFileThreshold && !await Confirm.AskAsync(new ConfirmRequest("Large file",
+                "This is a large file, and your browser may freeze while opening it. Do you wish to continue?",
+                "Yes", IsDestructive: false, CancelLabel: "No")))
+        {
+            Toasts.ShowInfo($"Did not open {file.Name}.");
+            return;
+        }
+
         byte[] bytes;
         try
         {
@@ -197,13 +236,76 @@
             return;
         }
 
-        if (DatabaseFileHeader.HasUnknownEncodingMarker(bytes, out var marker))
+        if (await FileWarnings.ShouldWarnAsync(bytes))
         {
-            _pendingOpen = new PendingOpen(bytes, file.Name, DatabaseFileHeader.FormatMarker(marker));
+            _pendingUnofficialOpen = new PendingUnofficialOpen(bytes, file.Name);
             return;
         }
 
-        await LoadFileAsync(bytes, file.Name, encoding: null);
+        await ContinueOpenAsync(bytes, file.Name);
+    }
+
+    private async Task ContinueUnofficialOpenAsync()
+    {
+        if (_pendingUnofficialOpen is not { } pending)
+        {
+            return;
+        }
+
+        _pendingUnofficialOpen = null;
+        await ContinueOpenAsync(pending.File, pending.FileName);
+    }
+
+    private async Task DisableUnofficialWarningAndContinueAsync()
+    {
+        await FileWarnings.DisableUnofficialFileWarningAsync();
+        await ContinueUnofficialOpenAsync();
+    }
+
+    private async Task ContinueOpenAsync(byte[] bytes, string fileName)
+    {
+        if (DatabaseFileHeader.HasUnknownEncodingMarker(bytes, out var marker))
+        {
+            _pendingOpen = new PendingOpen(bytes, fileName, DatabaseFileHeader.FormatMarker(marker));
+            return;
+        }
+
+        if (R4CheatFormats.Detect(bytes) == R4CheatFormat.M3Real)
+        {
+            try
+            {
+                _pendingM3Open = new PendingM3Open(bytes, fileName, R4M3RealDb.Inspect(bytes));
+            }
+            catch (InvalidDataException ex)
+            {
+                Logger.LogError(ex, "Could not open {FileName}.", fileName);
+                Toasts.ShowError($"Could not open {fileName}: {ex.Message}");
+            }
+
+            return;
+        }
+
+        await LoadFileAsync(bytes, fileName, encoding: null);
+    }
+
+    private async Task OpenPendingM3FileAsync(R4M3RealReadOptions options)
+    {
+        if (_pendingM3Open is not { } pending)
+        {
+            return;
+        }
+
+        _pendingM3Open = null;
+        await LoadFileAsync(pending.File, pending.FileName, encoding: null, options);
+    }
+
+    private void CancelPendingM3Open()
+    {
+        if (_pendingM3Open != null)
+        {
+            Toasts.ShowInfo($"Did not open {_pendingM3Open.FileName}.");
+            _pendingM3Open = null;
+        }
     }
 
     private async Task OpenPendingFileAsync(R4Encoding encoding)
@@ -226,14 +328,24 @@
         }
     }
 
-    private async Task LoadFileAsync(byte[] file, string fileName, R4Encoding? encoding)
+    private async Task LoadFileAsync(byte[] file, string fileName, R4Encoding? encoding,
+        R4M3RealReadOptions? m3RealOptions = null)
     {
         Toasts.ShowInfo($"Opening {fileName}...");
         try
         {
             _modalGame = null;
-            await Editor.LoadAsync(file, fileName, encoding);
+            await Editor.LoadAsync(file, fileName, encoding, m3RealOptions);
             var opened = $"Opened {fileName} ({Editor.Database?.Games.Count ?? 0} games).";
+            if (Editor.FileFormat != R4CheatFormat.R4)
+            {
+                opened = $"Opened {fileName} as {R4CheatFormats.GetDisplayName(Editor.FileFormat)} ({Editor.Database?.Games.Count ?? 0} games). Saving keeps this format.";
+            }
+
+            if (Editor.FileFormat == R4CheatFormat.M3Real)
+            {
+                opened += " Cheats open turned off because the format doesn't store on/off states.";
+            }
             Toasts.ShowInfo(encoding == null ? opened : $"{opened} Save it to write the {encoding} encoding marker.");
         }
         catch (Exception ex)
@@ -284,6 +396,58 @@
         }
     }
 
+    private void OpenExportModal()
+    {
+        if (!Editor.IsValid)
+        {
+            Toasts.ShowError("Please review any errors before exporting.");
+            return;
+        }
+
+        _isExportOpen = true;
+    }
+
+    private void CloseExportModal()
+    {
+        _isExportOpen = false;
+    }
+
+    private async Task ExportAsync(ExportFormatModal.ExportRequest request)
+    {
+        _isExportOpen = false;
+        var fileName = Editor.GetExportFileName(request.Format);
+        try
+        {
+            var bytes = await Editor.BuildExportBytesAsync(request.Format, request.M3RealOptions);
+            WarnAboutOverlongCheats(request.Format);
+            await FileDownload.DownloadAsync(fileName, bytes);
+            Toasts.ShowInfo($"Exported {fileName} as {R4CheatFormats.GetDisplayName(request.Format)}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not export {FileName}.", fileName);
+            Toasts.ShowError($"Could not export {fileName}: {ex.Message}");
+        }
+    }
+
+    // CycloDS Evolution and EDGE carts are thought to reject cheats longer than 255 rows; the file is still written.
+    private void WarnAboutOverlongCheats(R4CheatFormat format)
+    {
+        if (format is not (R4CheatFormat.CycloDsEvolution or R4CheatFormat.Edge))
+        {
+            return;
+        }
+
+        var overlong = Editor.FindOverlongEvolutionCheats();
+        if (overlong.Count > 0)
+        {
+            var (game, cheat) = overlong[0];
+            Toasts.ShowWarning(
+                $"{overlong.Count} cheat(s), such as '{cheat.Title}' in '{EditorState.GetGameDisplayTitle(game)}', " +
+                $"have more than {R4EvolutionCheats.MaxCodeRows} rows and may not work on the cart.");
+        }
+    }
+
     private async Task SaveAsync()
     {
         if (!CanSave)
@@ -296,6 +460,7 @@
         try
         {
             var bytes = await Editor.BuildSaveBytesAsync();
+            WarnAboutOverlongCheats(Editor.FileFormat);
             Toasts.ShowInfo("Beginning download...");
             await FileDownload.DownloadAsync(fileName, bytes);
             Editor.MarkSaved();
@@ -325,5 +490,9 @@
         Shortcuts.RedoRequested -= HandleRedoShortcut;
     }
 
+    private sealed record PendingUnofficialOpen(byte[] File, string FileName);
+
     private sealed record PendingOpen(byte[] File, string FileName, string Marker);
+
+    private sealed record PendingM3Open(byte[] File, string FileName, R4M3RealFileInfo Detected);
 }

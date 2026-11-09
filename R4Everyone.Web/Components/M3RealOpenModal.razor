@@ -1,0 +1,94 @@
+@if (IsOpen && Detected is { } detected)
+{
+    <div class="prompt-backdrop" @onclick="OnCancel">
+        <div class="prompt-modal" role="dialog" aria-modal="true" aria-labelledby="m3-open-title"
+             @onclick:stopPropagation="true">
+            <div class="prompt-header">
+                <div class="modal-title" id="m3-open-title">Open M3 DS Real file</div>
+            </div>
+            <div class="prompt-body">
+                <p class="mb-0">
+                    <strong>@FileName</strong> is an M3 DS Real cheat file
+                    (@detected.GameCount games, @(detected.Mode == R4M3RealMode.Dht ? "DHT" : "Extended") style).
+                    These files don't record their settings, so check the guesses below.
+                </p>
+
+                <div class="export-options">
+                    <div class="export-option">
+                        <label class="form-label" for="m3-open-encoding">Text encoding</label>
+                        <select class="form-select form-select-sm" id="m3-open-encoding" @bind="_encoding">
+                            @foreach (var (encoding, label) in Encodings)
+                            {
+                                <option value="@encoding">@label@(encoding == detected.Encoding ? " (detected)" : "")</option>
+                            }
+                        </select>
+                        <div class="encoding-description">
+                            Shift-JIS, GBK, and Big5 look alike. If titles look garbled after opening, open the file
+                            again with another encoding.
+                        </div>
+                    </div>
+                    <div class="export-option">
+                        <label class="form-label" for="m3-open-notes">Notes</label>
+                        <select class="form-select form-select-sm" id="m3-open-notes" @bind="_notePosition">
+                            <option value="@R4M3RealNotePosition.BeforeName">
+                                Before the name@(detected.NotePosition == R4M3RealNotePosition.BeforeName ? " (detected)" : "")
+                            </option>
+                            <option value="@R4M3RealNotePosition.AfterName">
+                                After the name@(detected.NotePosition == R4M3RealNotePosition.AfterName ? " (detected)" : "")
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <p class="form-text mb-0">
+                    M3 DS Real files don't store cheat on/off states, master codes, or the database title, so cheats
+                    open turned off. Saving keeps the M3 DS Real format and these settings.
+                </p>
+            </div>
+            <div class="prompt-footer">
+                <button type="button" class="btn btn-outline-secondary" @onclick="OnCancel">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="OpenAsync">Open file</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly (R4Encoding Encoding, string Label)[] Encodings =
+    [
+        (R4Encoding.SJIS, "Shift-JIS (Japanese)"),
+        (R4Encoding.GBK, "GBK (Simplified Chinese)"),
+        (R4Encoding.BIG5, "Big5 (Traditional Chinese)"),
+        (R4Encoding.UTF8, "UTF-8")
+    ];
+
+    private R4Encoding _encoding;
+    private R4M3RealNotePosition _notePosition;
+    private R4M3RealFileInfo? _shownFor;
+
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string FileName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The settings detected from the file, which are preselected.
+    /// </summary>
+    [Parameter] public R4M3RealFileInfo? Detected { get; set; }
+
+    [Parameter] public EventCallback<R4M3RealReadOptions> OnSelected { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        // Preselect the detected settings each time a new file is shown.
+        if (IsOpen && Detected is { } detected && !ReferenceEquals(detected, _shownFor))
+        {
+            _encoding = detected.Encoding;
+            _notePosition = detected.NotePosition;
+        }
+
+        _shownFor = IsOpen ? Detected : null;
+    }
+
+    private Task OpenAsync() =>
+        OnSelected.InvokeAsync(new R4M3RealReadOptions { Encoding = _encoding, NotePosition = _notePosition });
+}

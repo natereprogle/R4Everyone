@@ -4,9 +4,13 @@
         <button class="btn btn-outline-primary w-100" @onclick="OnNew">New File</button>
         <label class="btn btn-outline-secondary w-100">
             Open File
-            <InputFile class="d-none" OnChange="@OnOpen" accept=".dat" />
+            @* Clearing the value lets the same file be picked again, e.g. after answering "No" to the large file prompt. *@
+            <InputFile class="d-none" OnChange="@OnOpen" accept=".dat,.evoCheats,.db" onclick="this.value = null" />
         </label>
         <button class="btn btn-primary w-100" @onclick="OnSave" disabled="@(!CanSave)">Save File</button>
+        <button class="btn btn-outline-primary w-100" @onclick="OnExportAs" disabled="@(!CanExport)"
+                title="Download the open file as R4, CycloDS Evolution, EDGE, or M3 DS Real">Export As…
+        </button>
         <div class="button-pair">
             <label class="btn btn-outline-secondary" title="Replace the open file with games from a codelist XML file">
                 Import XML
@@ -25,6 +29,7 @@
     [Parameter] public EventCallback OnNew { get; set; }
     [Parameter] public EventCallback<InputFileChangeEventArgs> OnOpen { get; set; }
     [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnExportAs { get; set; }
     [Parameter] public EventCallback<InputFileChangeEventArgs> OnImportXml { get; set; }
     [Parameter] public EventCallback OnExportXml { get; set; }
 }

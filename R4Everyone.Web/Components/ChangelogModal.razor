@@ -11,6 +11,97 @@
             </div>
             <div class="changelog-body">
                 <div class="changelog-section">
+                    <h4>Version 3.0.0</h4>
+                    <div class="changelog-section">
+                        <h6>New Features</h6>
+                        <p>Version 3.0.0 of R4Everyone brings R4Everyone to near feature-parity with r4cce, and even
+                            adds features that r4cce does not implement, such as the ability to <strong>read</strong> M3
+                            DS Real cheats!</p>
+                        <ul>
+                            <li><strong>More cheat formats.</strong> R4Everyone now opens and saves CycloDS Evolution
+                                (<code>.evoCheats</code>), EDGE (<code>.dat</code>), and M3 DS Real (<code>.db</code>)
+                                cheat files, as well as R4 <code>usrcheat.dat</code>. The format is detected from the
+                                file's contents, so R4 and EDGE <code>.dat</code> files are told apart automatically.
+                                Saving keeps the format the file was opened in. Note that M3 DS Real is
+                                <strong>experimental</strong> as not even r4cce can open these files (only write them),
+                                so use with caution.
+                            </li>
+                            <li><strong>"Export As..."</strong> Convert the open file to R4, CycloDS Evolution, EDGE, or
+                                M3 DS Real without changing the open file. M3 DS Real exports let you choose the folder
+                                style (Extended or DHT), where notes go, the text encoding (Shift-JIS, GBK, Big5, or
+                                UTF-8), and r4cce's "Character fix".
+                            </li>
+                            <li><strong>Opening M3 DS Real files.</strong> These files don't record their text encoding
+                                or note layout, so R4Everyone guesses them and asks you to confirm before opening.
+                                Saving writes the file back with the same settings.
+                            </li>
+                            <li><strong>Files from other tools.</strong> Opening a CycloDS Evolution or EDGE file
+                                that R4Everyone didn't create (for example, one from r4cce) warns that it may not read
+                                properly. Choose "Don't warn me again" to turn the warning off.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="changelog-section">
+                        <h6>Format Notes</h6>
+                        <ul>
+                            <li>CycloDS Evolution, EDGE, and M3 DS Real files don't store the database title, master
+                                codes, or game enable flags. CycloDS Evolution and EDGE only have one level of folders,
+                                so folders inside folders are merged into their top-level folder when saving.
+                            </li>
+                            <li>CycloDS Evolution and EDGE carts may reject cheats longer than 255 rows. R4Everyone
+                                warns you when saving or exporting such cheats.
+                            </li>
+                            <li>M3 DS Real files don't store cheat on/off states, so cheats open turned off. DHT-style
+                                files don't store notes or game titles (the game ID is shown instead), and
+                                Extended-style files don't store One Hot.
+                            </li>
+                            <li>Shift-JIS, GBK, and Big5 can't be told apart automatically. If titles in an M3 DS Real
+                                file look garbled, open it again and choose another encoding.
+                            </li>
+                            <li>CycloDS Evolution and EDGE files saved by R4Everyone use the creator tag
+                                <code>R4EO</code> instead of r4cce's <code>USAY</code>. r4cce still opens them, but may
+                                call them unofficial when saving over them.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="changelog-section">
+                        <h6>General</h6>
+                        <ul>
+                            <li>Dialogs fit better on small phones and in landscape: long file names wrap, the
+                                buttons stay visible while the options scroll, and radio buttons, checkboxes, and lists
+                                are larger on touch screens.
+                            </li>
+                            <li>New <strong>About</strong> panel (the &#9432; button in the header) with credits and a
+                                link to the source code on GitHub.
+                            </li>
+                            <li>Opening a file larger than 5 MB now asks first, since the browser may freeze while
+                                reading it.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="changelog-section">
+                        <h6><code>R4Everyone.Binary4Everyone</code> Library</h6>
+                        <ul>
+                            <li><strong>Breaking:</strong> the library now targets .NET 10.</li>
+                            <li>Added <code>R4CheatFormats</code>, which detects, loads, and saves any supported
+                                format.
+                            </li>
+                            <li>Added <code>R4EvolutionCheats</code> for CycloDS Evolution and EDGE files, and
+                                <code>R4M3RealDb</code> for M3 DS Real files, including <code>Inspect</code> to detect
+                                an M3 DS Real file's settings.
+                            </li>
+                            <li>Added managed <code>R4Md5</code> and <code>R4Rc4</code> implementations, since
+                                <code>System.Security.Cryptography.MD5</code> isn't supported in Blazor WebAssembly.
+                            </li>
+                            <li>CycloDS Evolution and EDGE files are saved with the creator tag
+                                <code>R4CheatFormats.CreatorTag</code>;
+                                <code>R4CheatFormats.IsCreatedByR4Everyone</code>
+                                checks for it.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="changelog-section">
                     <h4>Version 2.0.0</h4>
                     <div class="changelog-section">
                         <h6>New Features</h6>

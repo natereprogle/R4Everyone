@@ -13,6 +13,7 @@ builder.Services.AddScoped<EditorState>();
 builder.Services.AddScoped<GameTdbService>();
 builder.Services.AddScoped<CoverArtService>();
 builder.Services.AddScoped<ChangelogService>();
+builder.Services.AddScoped<FileWarningService>();
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<FileDownloadService>();
 builder.Services.AddScoped<ToastService>();

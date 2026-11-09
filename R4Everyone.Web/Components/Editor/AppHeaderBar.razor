@@ -55,6 +55,14 @@
         {
             <span class="badge text-bg-success">Valid</span>
         }
+        <button type="button" class="theme-icon about-button" title="About R4Everyone" aria-label="About R4Everyone"
+                @onclick="OnShowAbout">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="9"></circle>
+                <line x1="12" y1="11" x2="12" y2="16.5"></line>
+                <circle class="about-dot" cx="12" cy="7.75" r="0.6"></circle>
+            </svg>
+        </button>
     </div>
 </div>
 
@@ -64,6 +72,7 @@
     [Parameter] public bool IsDirty { get; set; }
     [Parameter] public int ErrorCount { get; set; }
     [Parameter] public EventCallback OnShowChangelog { get; set; }
+    [Parameter] public EventCallback OnShowAbout { get; set; }
 
     private ThemePreference _theme = ThemePreference.System;
 

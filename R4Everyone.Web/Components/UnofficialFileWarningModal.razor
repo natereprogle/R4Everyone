@@ -1,0 +1,35 @@
+@if (IsOpen)
+{
+    <div class="prompt-backdrop">
+        <div class="prompt-modal" role="alertdialog" aria-modal="true" aria-labelledby="unofficial-file-title"
+             aria-describedby="unofficial-file-description">
+            <div class="prompt-header">
+                <div class="modal-title" id="unofficial-file-title">This file wasn't created by R4Everyone</div>
+            </div>
+            <div class="prompt-body" id="unofficial-file-description">
+                <p>
+                    <strong>@FileName</strong> was made by another tool, such as r4cce, or by a version of R4Everyone
+                    older than 3.0.0. It may not read properly: some games, cheats, or text could be missing or
+                    garbled.
+                </p>
+                <p class="form-text mb-0">
+                    Check the file before saving over it. Saving it from R4Everyone tags it as created by R4Everyone,
+                    so you won't see this warning for it again.
+                </p>
+            </div>
+            <div class="prompt-footer">
+                <button type="button" class="btn btn-outline-secondary" @onclick="OnDontWarnAgain">
+                    Don't warn me again
+                </button>
+                <button type="button" class="btn btn-primary" @onclick="OnUnderstood">I Understand</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string FileName { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnUnderstood { get; set; }
+    [Parameter] public EventCallback OnDontWarnAgain { get; set; }
+}
